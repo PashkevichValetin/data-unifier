@@ -1,3 +1,17 @@
 spring:
   application:
     name: data-unifier
+
+  main:
+    web-application-type: none
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+
+logging:
+  level:
+    org.springframework: INFO
+    com.yourname: DEBUG
