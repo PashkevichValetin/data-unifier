@@ -1,17 +1,46 @@
 spring:
-  application:
-    name: data-unifier
-
-  main:
-    web-application-type: none
 
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
-      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: universal-aggregator
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+app:
+  datasource:
+    postgres:
+      url: jdbc:postgresql://localhost:5433/user_db
+      username: app_user
+      password: password
+      driver-class-name: org.postgresql.Driver
+    mysql:
+      url: jdbc:mysql://localhost:3307/order_db
+      username: app_user
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+
+  kafka:
+    topic:
+      unified-customers: unified-customers
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
 
 logging:
   level:
-    org.springframework: INFO
-    com.yourname: DEBUG
+    com.pashcevich: DEBUG

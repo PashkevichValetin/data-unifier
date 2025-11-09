@@ -1,4 +1,4 @@
-package com.pashcevich.data_unifier.domain.entitys.mysql;
+package com.pashcevich.data_unifier.adapter.mysql.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

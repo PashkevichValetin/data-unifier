@@ -6,35 +6,32 @@ services:
     environment:
       POSTGRES_DB: user_db
       POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: pass
+      POSTGRES_PASSWORD: password
     ports:
-      - '5432:5432'
+      - '5433:5432'
 
   mysql:
     image: mysql:8.0
     container_name: mysql-db
     environment:
-      MYSQL_DATABASE: user_db
+      MYSQL_DATABASE: order_db
       MYSQL_USER: app_user
-      MYSQL_PASSWORD: pass
-      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root_password
     ports:
-      - '3306:3306'
-
+      - '3307:3306'
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
-    container_name: zookeeper
-    ports:
-      - '2181:2181'
-
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
 
   kafka:
     image: confluentinc/cp-kafka:latest
-    container_name: kafka
     depends_on:
       - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
     ports:
       - '9092:9092'
-    environment:
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
