@@ -25,20 +25,24 @@ public class DataUnificationService {
         log.info("Starting data unification process...");
 
         try {
-            List<UnifiedCustomerDto> users = postgresUserAdapter.getAllUserForUnification();
-            log.info("Found {} users for unification", users.size());
+            List<UnifiedCustomerDto> postgresCustomers = postgresUserAdapter.fetchUsersForUnification();
+            log.info("Found {} customers from PostgreSQL", postgresCustomers.size());
 
-            users.forEach(user -> {
-                List<UnifiedCustomerDto.OrderData> orders = mySQLOrderAdapter.getOrdersByUserId(
-                        user.getUserId());
-                user.setOrders(orders);
-                log.info("User {} has {} orders", user.getUserId(), orders.size());
-            });
-            users.forEach(unifiedDataProducer::sendUnifiedCustomer);
-            log.info("Successfully processed {} unified customer records", users.size());
+            List<UnifiedCustomerDto> mysqlCustomers = mySQLOrderAdapter.fetchCustomersWithOrders();
+            log.info("Found {} customers from MySQL with orders", mysqlCustomers.size());
+
+            unifiedDataProducer.sendUnifiedCustomers(postgresCustomers);
+            unifiedDataProducer.sendUnifiedCustomers(mysqlCustomers);
+
+            log.info("Data unification completed. Sent {} total customer records",
+                    postgresCustomers.size() + mysqlCustomers.size());
+
         } catch (Exception e) {
             log.error("Error during data unification process", e);
         }
     }
-
+    public void triggerManualUnification() {
+        log.info("Manual data unification triggered");
+        unifyAndSendData();
+    }
 }
