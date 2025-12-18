@@ -2,6 +2,7 @@ package com.pashcevich.data_unifier.adapter.postgres.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -24,9 +25,21 @@ public class UserEntity {
     @Column(name = "registration_date")
     private LocalDateTime registrationDate;
 
+    @Column(name = "updated_at") // Исправлено: было updatedAt
+    private LocalDateTime updatedAt;
+
     public UserEntity(String name, String email) {
         this.name = name;
         this.email = email;
         this.registrationDate = LocalDateTime.now();
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void updateTimestamps() {
+        if (registrationDate == null) {
+            registrationDate = LocalDateTime.now();
+        }
+        updatedAt = LocalDateTime.now();
     }
 }

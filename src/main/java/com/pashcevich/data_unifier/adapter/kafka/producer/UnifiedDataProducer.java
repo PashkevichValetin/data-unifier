@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
-import java.util.List;
+
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -17,59 +17,39 @@ public class UnifiedDataProducer {
 
     private final KafkaTemplate<String, UnifiedCustomerDto> kafkaTemplate;
 
-    @Value("${app.kafka.topic.unified-customers:unified-customers}")
-    private String topicName;
+    @Value("${app.kafka.topic.unified-customers}")
+    private String unifiedCustomersTopic;
 
     public void sendUnifiedCustomer(UnifiedCustomerDto customer) {
         try {
-            String key = customer.getCustomerId();
+            String key = String.valueOf(customer.getUserId());
 
-            CompletableFuture<SendResult<String, UnifiedCustomerDto>> future =
-                    kafkaTemplate.send(topicName, key, customer);
+            CompletableFuture<SendResult<String, UnifiedCustomerDto>> future = kafkaTemplate
+                    .send(unifiedCustomersTopic, key, customer);
 
             future.whenComplete((result, ex) -> {
                 if (ex == null) {
-                    log.debug("Successfully sent customer {} to partition {}",
-                            customer.getCustomerId(),
-                            result.getRecordMetadata().partition());
+                    log.debug("Successfully sent unified data for user ID {} to topic {}",
+                            customer.getUserId(), unifiedCustomersTopic);
                 } else {
-                    log.error("Failed to send customer: {}", customer.getCustomerId(), ex);
+                    log.error("Failed to send unified data for user ID {}: {}",
+                            customer.getUserId(), ex.getMessage());
                 }
             });
-
-            log.info("Sent unified data to Kafka for customer: {}", customer.getCustomerId());
-
         } catch (Exception e) {
-            log.error("Unexpected error sending customer: {}", customer.getCustomerId(), e);
+            log.error("Error sending unified data to Kafka: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to send data to Kafka", e);
         }
     }
 
-    public void sendUnifiedCustomers(List<UnifiedCustomerDto> customers) {
-        if (customers == null || customers.isEmpty()) {
-            log.warn("Attempted to send empty customers list");
-            return;
-        }
-
-        log.info("Sending batch of {} customers to Kafka", customers.size());
-
-        customers.forEach(this::sendUnifiedCustomer);
-
-        log.info("Completed batch send of {} customers", customers.size());
-    }
-
-    public boolean sendUnifiedCustomerSync(UnifiedCustomerDto customer) {
+    public SendResult<String, UnifiedCustomerDto> sendUnifiedCustomerSync(UnifiedCustomerDto customer) {
         try {
-            SendResult<String, UnifiedCustomerDto> result = kafkaTemplate.send(
-                    topicName, customer.getCustomerId(), customer
-            ).get();
-
-            log.debug("Sync send successful for customer: {}, partition: {}",
-                    customer.getCustomerId(), result.getRecordMetadata().partition());
-            return true;
-
+            String key = String.valueOf(customer.getUserId());
+            return kafkaTemplate.send(unifiedCustomersTopic, key, customer).get();
         } catch (Exception e) {
-            log.error("Sync send failed for customer: {}", customer.getCustomerId(), e);
-            return false;
+            log.error("Synchronous send failed for user ID {}: {}",
+                    customer.getUserId(), e.getMessage(), e);
+            throw new RuntimeException("Synchronous send failed", e);
         }
     }
 }

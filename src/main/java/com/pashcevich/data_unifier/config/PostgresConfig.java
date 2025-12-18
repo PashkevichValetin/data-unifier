@@ -1,8 +1,9 @@
 package com.pashcevich.data_unifier.config;
 
 import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.jdbc.DataSourceBuilder;
+import jakarta.persistence.EntityManagerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -13,50 +14,96 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
         basePackages = "com.pashcevich.data_unifier.adapter.postgres.repository",
-        entityManagerFactoryRef = "postgresEntityManager",
+        entityManagerFactoryRef = "postgresEntityManagerFactory",
         transactionManagerRef = "postgresTransactionManager"
 )
 public class PostgresConfig {
 
-    @Bean
-    @ConfigurationProperties(prefix = "app.datasource.postgres")
+    @Value("${postgres.datasource.url}")
+    private String url;
+
+    @Value("${postgres.datasource.username}")
+    private String username;
+
+    @Value("${postgres.datasource.password}")
+    private String password;
+
+    @Value("${postgres.datasource.driver-class-name}")
+    private String driverClassName;
+
+    @Bean(name = "postgresDataSource")
     public DataSource postgresDataSource() {
-        return DataSourceBuilder.create()
-                .type(HikariDataSource.class)
-                .build();
+        System.out.println("=== Creating PostgreSQL DataSource ===");
+        System.out.println("URL: jdbc:postgresql://localhost:5433/user_db");
+        System.out.println("Username: app_user");
+        System.out.println("Password length: " + ("password".length()));
+
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setJdbcUrl("jdbc:postgresql://localhost:5433/user_db");
+        dataSource.setUsername("app_user");
+        dataSource.setPassword("password");  // Убедитесь, что здесь 'password'
+        dataSource.setDriverClassName("org.postgresql.Driver");
+        dataSource.setMaximumPoolSize(10);
+        dataSource.setMinimumIdle(2);
+        dataSource.setConnectionTimeout(30000);
+        dataSource.setMaxLifetime(1800000);
+        dataSource.setPoolName("postgres-users-pool");
+
+        // Тестовое подключение
+        try {
+            System.out.println("Testing connection...");
+            try (Connection conn = dataSource.getConnection()) {
+                System.out.println("SUCCESS: PostgreSQL connection established!");
+                try (Statement stmt = conn.createStatement()) {
+                    ResultSet rs = stmt.executeQuery("SELECT 1");
+                    if (rs.next()) {
+                        System.out.println("SUCCESS: Test query executed successfully");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("ERROR: Failed to connect to PostgreSQL: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return dataSource;
     }
 
-    @Bean
-    public LocalContainerEntityManagerFactoryBean postgresEntityManager() {
+    @Bean(name = "postgresEntityManagerFactory")
+    public LocalContainerEntityManagerFactoryBean postgresEntityManagerFactory(
+            @Qualifier("postgresDataSource") DataSource dataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
-        em.setDataSource(postgresDataSource());
+        em.setDataSource(dataSource);
         em.setPackagesToScan("com.pashcevich.data_unifier.adapter.postgres.entity");
-        em.setPersistenceUnitName("postgresPU");
+        em.setPersistenceUnitName("postgresPersistenceUnit");
 
         HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
         em.setJpaVendorAdapter(vendorAdapter);
 
         HashMap<String, Object> properties = new HashMap<>();
-        properties.put("hibernate.hbm2ddl.auto", "update");
+        properties.put("jakarta.persistence.schema-generation.database.action", "validate");
         properties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-        properties.put("hibernate.show_sql", "true");
-        properties.put("hibernate.format_sql", "true");
-        properties.put("hibernate.jdbc.lob.non_contextual_creation", "true");
+        properties.put("hibernate.show_sql", true);
+        properties.put("hibernate.format_sql", true);
+        properties.put("hibernate.hbm2ddl.auto", "validate");
         em.setJpaPropertyMap(properties);
 
         return em;
     }
 
-    @Bean
-    public PlatformTransactionManager postgresTransactionManager() {
-        JpaTransactionManager transactionManager = new JpaTransactionManager();
-        transactionManager.setEntityManagerFactory(postgresEntityManager().getObject());
-        return transactionManager;
+    @Bean(name = "postgresTransactionManager")
+    public PlatformTransactionManager postgresTransactionManager(
+            @Qualifier("postgresEntityManagerFactory") EntityManagerFactory entityManagerFactory) {
+        return new JpaTransactionManager(entityManagerFactory);
     }
 }

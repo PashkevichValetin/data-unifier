@@ -16,25 +16,19 @@ import java.time.LocalDateTime;
 public class OrderEntity {
 
     @Id
-    @Column(name = "order_id")
-    private String orderId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "customer_name")
-    private String customerName;
-
-    @Column(name = "customer_email")
-    private String customerEmail;
-
     @Column(name = "amount", nullable = false)
     private BigDecimal amount;
 
-    @Column(name = "status", nullable = false)
+    @Column(name = "status")
     private String status;
 
-    @Column(name = "order_date")
-    private LocalDateTime orderDate;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
 }

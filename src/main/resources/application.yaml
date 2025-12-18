@@ -1,9 +1,11 @@
-server:
-  port: 8081  # ✅ Добавьте эту строку
-
 spring:
+  application:
+    name: data-unifier-service
+
   autoconfigure:
     exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
       - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
 
   kafka:
@@ -14,46 +16,71 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: "*"
+        spring.json.trusted.packages: "com.pashcevich.data_unifier.adapter.kafka.producer.dto"
+        spring.json.use.type.headers: true
+        spring.json.type.mapping: unifiedCustomer:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: true
+        spring.json.type.mapping: unifiedCustomer:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto
 
-# ИСПРАВЛЕННЫЕ НАСТРОЙКИ DATASOURCE
-app:
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: UTC
+
+# Конфигурация для MySQL (правильная)
+mysql:
   datasource:
-    postgres:
-      jdbc-url: jdbc:postgresql://localhost:5433/user_db
-      username: app_user
-      password: password
-      driver-class-name: org.postgresql.Driver
-      pool:
-        maximum-pool-size: 10
-        minimum-idle: 2
-        connection-timeout: 30000
-    mysql:
-      jdbc-url: jdbc:mysql://localhost:3307/order_db
-      username: app_user
-      password: password
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      pool:
-        maximum-pool-size: 10
-        minimum-idle: 2
-        connection-timeout: 30000
+    url: jdbc:mysql://localhost:3307/order_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: app_user
+    password: password
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
+# Конфигурация для PostgreSQL (ИСПРАВЛЕНА)
+postgres:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/user_db?ssl=false
+    username: app_user
+    password: password
+    driver-class-name: org.postgresql.Driver Ва
+
+app:
   kafka:
     topic:
       unified-customers: unified-customers
+
+  scheduler:
+    enabled: true
+    unification:
+      cron: "0 */5 * * * *"
+
+  batch:
+    size: 100
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  shutdown: graceful
 
 logging:
   level:
+    root: INFO
     com.pashcevich: DEBUG
-    org.springframework.kafka: INFO
+    org.springframework: INFO
     org.hibernate.SQL: DEBUG
-    org.hibernate.type: TRACE
