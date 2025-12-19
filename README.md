@@ -12,7 +12,7 @@ A Spring Boot application that demonstrates the Adapter Pattern by unifying data
 
 ## Tech Stack
 
-- Java 17 - Core programming language
+- Java 21 - Core programming language
 - Spring Boot 3 - Application framework
 - PostgreSQL - Relational database for user data
 - MySQL - Relational database for order data
@@ -23,7 +23,7 @@ A Spring Boot application that demonstrates the Adapter Pattern by unifying data
 
 ## Prerequisites
 
-- Java 17 or higher
+- Java 21 or higher
 - Docker and Docker Compose
 - Git
 
