@@ -1,4 +1,4 @@
-package com.pashcevich.data_unifier.service; // исправлено: service, не sevice
+package com.pashcevich.data_unifier.service;
 
 import com.pashcevich.data_unifier.adapter.kafka.producer.UnifiedDataProducer;
 import com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto;
@@ -20,6 +20,7 @@ public class DataUnificationService {
     private final MySQLOrderAdapter mySQLOrderAdapter;
     private final UnifiedDataProducer unifiedDataProducer;
 
+    @Transactional(transactionManager = "mysqlTransactionManager", readOnly = false)
     public void unifyAllCustomers() {
         log.info("Starting data unification process...");
 
@@ -47,11 +48,48 @@ public class DataUnificationService {
         }
     }
 
+    @Transactional(transactionManager = "postgresTransactionManager", readOnly = true)
     public UnifiedCustomerDto unifyCustomerById(Long userId) {
         log.info("Unifying data for user ID: {}", userId);
 
-        // Здесь будет логика для получения одного пользователя
-        // Пока просто заглушка
-        throw new UnsupportedOperationException("Method not implemented yet");
+        try {
+            // 1. Используем postgresTransactionManager для запроса пользователя
+            UnifiedCustomerDto user = postgresUserAdapter.getUserById(String.valueOf(userId));
+
+            if (user == null) {
+                log.warn("User with ID {} not found in PostgreSQL", userId);
+                throw new RuntimeException("User not found with ID: " + userId);
+            }
+
+            log.debug("Found user: {}", user.getEmail());
+
+            // 2. Получаем заказы - исправляем опечатку в имени переменной
+            List<UnifiedCustomerDto.OrderData> orders = mySQLOrderAdapter // правильно mySQLOrderAdapter
+                    .getOrdersByUserId(userId);
+
+            user.setOrders(orders);
+
+            // 3. Отправка в Kafka
+            try {
+                unifiedDataProducer.sendUnifiedCustomer(user);
+                log.debug("Unified data for user ID {} sent to Kafka", userId);
+            } catch (Exception e) {
+                log.warn("Failed to send user ID {} to Kafka: {}", userId, e.getMessage());
+                // Продолжаем выполнение
+            }
+
+            // 4. Исправляем опечатку в логе
+            log.info("Successfully unified data for user ID: {}. Orders found: {}",
+                    userId, orders.size());
+
+            return user;
+
+        } catch (RuntimeException e) {
+            // Перебрасываем готовое исключение
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to unify data for user ID {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Failed to unify data for user: " + userId, e);
+        }
     }
 }

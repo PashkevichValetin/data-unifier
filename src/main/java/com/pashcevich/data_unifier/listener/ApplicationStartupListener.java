@@ -14,9 +14,9 @@ public class ApplicationStartupListener {
         log.info("========================================================");
         log.info("Data Unifier Service started successfully");
         log.info("Available endpoints:");
-        log.info(" POST /avi/v1/unification/run - Start data unification");
-        log.info(" GET /avi/v1/test/health      - Health check");
-        log.info(" GET /avi/v1/test/info        - Service info");
+        log.info(" POST /api/v1/unification/run - Start data unification");
+        log.info(" GET /api/v1/test/health      - Health check");
+        log.info(" GET /api/v1/test/info        - Service info");
         log.info(" GET /management/health       - Actuator health");
         log.info("=========================================================");
     }

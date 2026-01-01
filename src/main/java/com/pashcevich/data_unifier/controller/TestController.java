@@ -8,18 +8,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-/**
- * Тестовый контроллер для проверки работоспособности сервиса
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/test")
 public class TestController {
 
-    /**
-     * Проверка работоспособности сервиса
-     * @return статус сервиса
-     */
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> healthCheck() {
         log.info("Health check requested");
@@ -30,10 +23,6 @@ public class TestController {
         ));
     }
 
-    /**
-     * Получение информации о сервисе
-     * @return информация о сервисе
-     */
     @GetMapping("/info")
     public ResponseEntity<Map<String, Object>> serviceInfo() {
         return ResponseEntity.ok(Map.of(

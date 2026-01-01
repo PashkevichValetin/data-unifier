@@ -42,4 +42,4 @@ Thumbs.db
 docker-data/
 
 # Environment variables
-.env
+.env.gradle/

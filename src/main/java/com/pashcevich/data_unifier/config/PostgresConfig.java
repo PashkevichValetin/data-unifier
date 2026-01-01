@@ -14,10 +14,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashMap;
 
 @Configuration
@@ -44,36 +40,31 @@ public class PostgresConfig {
     @Bean(name = "postgresDataSource")
     public DataSource postgresDataSource() {
         System.out.println("=== Creating PostgreSQL DataSource ===");
-        System.out.println("URL: jdbc:postgresql://localhost:5433/user_db");
-        System.out.println("Username: app_user");
-        System.out.println("Password length: " + ("password".length()));
+        System.out.println("URL: " + url);
+        System.out.println("Username: " + username);
+        System.out.println("Password length: " + (password != null ? password.length() : 0));
+        System.out.println("Testing connection...");
 
         HikariDataSource dataSource = new HikariDataSource();
-        dataSource.setJdbcUrl("jdbc:postgresql://localhost:5433/user_db");
-        dataSource.setUsername("app_user");
-        dataSource.setPassword("password");  // Убедитесь, что здесь 'password'
-        dataSource.setDriverClassName("org.postgresql.Driver");
+        dataSource.setJdbcUrl(url);
+        dataSource.setUsername(username);
+        dataSource.setPassword(password);
+        dataSource.setDriverClassName(driverClassName);
         dataSource.setMaximumPoolSize(10);
         dataSource.setMinimumIdle(2);
         dataSource.setConnectionTimeout(30000);
         dataSource.setMaxLifetime(1800000);
         dataSource.setPoolName("postgres-users-pool");
 
-        // Тестовое подключение
-        try {
-            System.out.println("Testing connection...");
-            try (Connection conn = dataSource.getConnection()) {
-                System.out.println("SUCCESS: PostgreSQL connection established!");
-                try (Statement stmt = conn.createStatement()) {
-                    ResultSet rs = stmt.executeQuery("SELECT 1");
-                    if (rs.next()) {
-                        System.out.println("SUCCESS: Test query executed successfully");
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            System.out.println("ERROR: Failed to connect to PostgreSQL: " + e.getMessage());
-            e.printStackTrace();
+        // Тест подключения
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.createStatement()) {
+            stmt.execute("SELECT 1");
+            System.out.println("SUCCESS: PostgreSQL connection established!");
+            System.out.println("SUCCESS: Test query executed successfully");
+        } catch (Exception e) {
+            System.err.println("ERROR: PostgreSQL connection failed: " + e.getMessage());
+            throw new RuntimeException("Failed to connect to PostgreSQL", e);
         }
 
         return dataSource;
@@ -91,11 +82,12 @@ public class PostgresConfig {
         em.setJpaVendorAdapter(vendorAdapter);
 
         HashMap<String, Object> properties = new HashMap<>();
-        properties.put("jakarta.persistence.schema-generation.database.action", "validate");
+        // ИЗМЕНИТЬ validate на update!
+        properties.put("jakarta.persistence.schema-generation.database.action", "update");
         properties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         properties.put("hibernate.show_sql", true);
         properties.put("hibernate.format_sql", true);
-        properties.put("hibernate.hbm2ddl.auto", "validate");
+        properties.put("hibernate.hbm2ddl.auto", "update");  // ИЗМЕНИТЬ!
         em.setJpaPropertyMap(properties);
 
         return em;

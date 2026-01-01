@@ -8,9 +8,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Контроллер для управления процессом унификации данных
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/unification")
@@ -19,10 +16,6 @@ public class DataUnificationController {
 
     private final DataUnificationService dataUnificationService;
 
-    /**
-     * Запускает процесс сбора данных из PostgreSQL и MySQL, их объединение и отправку в Kafka
-     * @return сообщение о результате выполнения
-     */
     @PostMapping("/run")
     public ResponseEntity<String> runUnification() {
         log.info("Received request to run data unification");
