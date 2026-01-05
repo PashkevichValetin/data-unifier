@@ -3,18 +3,22 @@ spring:
     name: data-unifier-service
 
   kafka:
-    bootstrap-servers: localhost:9092  # ВАЖНО: используйте localhost
+    bootstrap-servers: localhost:9092
     admin:
-      fail-fast: false  # Не падать если Kafka недоступен
+      fail-fast: false
     consumer:
       group-id: universal-aggregator
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      auto-startup: false  # Не стартовать автоматически
+      auto-startup: false
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Выберите один из вариантов:
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer  # для JSON
+      # value-serializer: org.apache.kafka.common.serialization.StringSerializer  # для строк
+    properties:
+      spring.json.type.mapping: unifiedCustomerDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto
 
 # MySQL
 mysql:
@@ -54,3 +58,15 @@ logging:
     com.pashcevich: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# Actuator Configuration
+management:
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: /actuator
