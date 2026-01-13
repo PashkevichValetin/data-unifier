@@ -21,7 +21,7 @@ public class UnifiedDataProducer {
     private String unifiedCustomersTopic;
 
     public void sendUnifiedCustomer(UnifiedCustomerDto customer) {
-        System.out.println("🔵 KAFKA DEBUG: Attempting to send user " + customer.getUserId() + " to topic: " + unifiedCustomersTopic);
+        log.debug("Attempting to send user {} to topic: {}", customer.getUserId(), unifiedCustomersTopic);
         try {
             String key = String.valueOf(customer.getUserId());
 
@@ -34,11 +34,12 @@ public class UnifiedDataProducer {
                             customer.getUserId(), unifiedCustomersTopic);
                 } else {
                     log.error("Failed to send unified data for user ID {}: {}",
-                            customer.getUserId(), ex.getMessage());
+                            customer.getUserId(), ex.getMessage(), ex);
                 }
             });
         } catch (Exception e) {
-            log.error("Error sending unified data to Kafka: {}", e.getMessage(), e);
+            log.error("Error sending unified data to Kafka for user ID {}: {}",
+                    customer.getUserId(), e.getMessage(), e);
             throw new RuntimeException("Failed to send data to Kafka", e);
         }
     }

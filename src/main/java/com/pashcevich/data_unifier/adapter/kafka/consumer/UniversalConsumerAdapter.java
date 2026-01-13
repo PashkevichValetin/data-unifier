@@ -50,10 +50,7 @@ public class UniversalConsumerAdapter {
                             order.getOrderId(), order.getAmount(), order.getStatus(), order.getCreatedAt()));
         }
 
-        // Здесь можно добавить бизнес-логику:
-        // 1. Сохранение в другую БД
-        // 2. Отправка в аналитическую систему
-        // 3. Обновление кэша
-        // 4. Нотификации
+        // Здесь можно добавить логику обработки данных (например, сохранение в БД)
+        // processCustomerData(customer);
     }
 }

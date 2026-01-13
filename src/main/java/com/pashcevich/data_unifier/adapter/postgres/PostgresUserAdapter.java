@@ -1,72 +1,63 @@
 package com.pashcevich.data_unifier.adapter.postgres;
 
-import com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto;
 import com.pashcevich.data_unifier.adapter.postgres.entity.UserEntity;
 import com.pashcevich.data_unifier.adapter.postgres.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import com.pashcevich.data_unifier.exception.UserAdapterException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
 
-@Slf4j
 @Component
-@RequiredArgsConstructor
 public class PostgresUserAdapter {
 
-    private final UserRepository userRepository;
+    private static final Logger logger = LoggerFactory.getLogger(PostgresUserAdapter.class);
 
-    public List<UnifiedCustomerDto> getAllUserForUnification() {
-        List<UserEntity> users = userRepository.findAll();
-        return users.stream()
-                .map(this::convertToUnifiedDto)
-                .toList();
-    }
+    @Autowired
+    private UserRepository userRepository;
 
-    public UnifiedCustomerDto getUserById(String userId) {
-        log.debug("Fetching user by ID: {}", userId);
-
+    public List<UserEntity> getAllUsers() {
         try {
-            // 1. Преобразуем String userId в Long
-            Long userIdLong;
-            try {
-                userIdLong = Long.parseLong(userId);
-            } catch (NumberFormatException e) {
-                log.error("Invalid user ID format: {}", userId);
-                return null;
-            }
-
-            // 2. Ищем пользователя в репозитории
-            Optional<UserEntity> userEntity = userRepository.findById(userIdLong);
-
-            // 3. Преобразуем в UnifiedCustomerDto или возвращаем null
-            return userEntity
-                    .map(this::convertToUnifiedDtoWithLogging)
-                    .orElseGet(() -> {
-                        log.debug("User not found with ID: {}", userId);
-                        return null;
-                    });
-
+            logger.info("Fetching all users from PostgreSQL");
+            List<UserEntity> users = userRepository.findAll();
+            logger.info("Successfully fetched {} users", users.size());
+            return users;
         } catch (Exception e) {
-            log.error("Error fetching user with ID {}: {}", userId, e.getMessage(), e);
-            throw new RuntimeException("Database error while fetching user: " + userId, e);
+            logger.error("Error fetching users from PostgreSQL", e);
+            throw new UserAdapterException("Failed to fetch users from PostgreSQL", e);
         }
     }
 
-    private UnifiedCustomerDto convertToUnifiedDto(UserEntity user) {
-        UnifiedCustomerDto dto = new UnifiedCustomerDto();
-        dto.setUserId(user.getId());
-        dto.setName(user.getName());
-        dto.setEmail(user.getEmail());
-        dto.setRegistrationDate(user.getRegistrationDate());
-        return dto;
+    public UserEntity getUserById(Long id) throws UserNotFoundException {
+        try {
+            logger.info("Fetching user with id {} from PostgreSQL", id);
+            Optional<UserEntity> user = userRepository.findById(id);
+            if (user.isPresent()) {
+                logger.info("Successfully fetched user with id {}", id);
+                return user.get();
+            } else {
+                logger.warn("User with id {} not found", id);
+                throw new UserNotFoundException("User with id " + id + " not found");
+            }
+        } catch (UserNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error fetching user with id {} from PostgreSQL", id, e);
+            throw new UserAdapterException("Failed to fetch user with id " + id + " from PostgreSQL", e);
+        }
     }
 
-    private UnifiedCustomerDto convertToUnifiedDtoWithLogging(UserEntity user) {
-        UnifiedCustomerDto dto = convertToUnifiedDto(user);
-        log.debug("User found: ID={}, Email={}, Name={}",
-                user.getId(), user.getEmail(), user.getName());
-        return dto;
+    public void saveUser(UserEntity user) {
+        try {
+            logger.info("Saving user to PostgreSQL: {}", user.getName());
+            userRepository.save(user);
+            logger.info("Successfully saved user to PostgreSQL");
+        } catch (Exception e) {
+            logger.error("Error saving user to PostgreSQL", e);
+            throw new UserAdapterException("Failed to save user to PostgreSQL", e);
+        }
     }
 }

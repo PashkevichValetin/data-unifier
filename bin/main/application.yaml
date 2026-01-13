@@ -14,39 +14,27 @@ spring:
       auto-startup: false
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # Выберите один из вариантов:
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer  # для JSON
+      # value-serializer: org.apache.kafka.common.serialization.StringSerializer  # для строк
     properties:
       spring.json.type.mapping: unifiedCustomerDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto
 
-# MySQL Configuration
+# MySQL
 mysql:
   datasource:
-    url: jdbc:mysql://localhost:3307/order_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8&connectionCollation=utf8_general_ci
+    url: jdbc:mysql://localhost:3307/order_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: app_user
     password: password
     driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      pool-name: MySQLHikariCP
 
-# PostgreSQL Configuration
+# PostgreSQL
 postgres:
   datasource:
-    url: jdbc:postgresql://localhost:5433/user_db?ssl=false&characterEncoding=UTF-8
+    url: jdbc:postgresql://localhost:5433/user_db?ssl=false
     username: app_user
     password: password
     driver-class-name: org.postgresql.Driver
-    hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      pool-name: PostgreSQLHikariCP
 
 # App configuration
 app:
@@ -70,7 +58,6 @@ logging:
     com.pashcevich: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    org.springframework.kafka: DEBUG
 
 # Actuator Configuration
 management:
@@ -83,21 +70,3 @@ management:
       exposure:
         include: "*"
       base-path: /actuator
-
-# JPA/Hibernate Configuration
-  jpa:
-    hibernate:
-      ddl-auto: validate  # Используем validate вместо update для продакшена
-    show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect  # Для MySQL
-        format_sql: true
-        use_sql_comments: true
-    open-in-view: false
-
-  datasource:
-    hikari:
-      connection-test-query: SELECT 1
-      validation-timeout: 5000
-

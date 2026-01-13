@@ -10,6 +10,10 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.util.backoff.FixedBackOff;
 
+import static org.apache.kafka.common.requests.DeleteAclsResponse.log;
+
+
+
 @Configuration
 public class KafkaConsumerConfig {
 
@@ -28,17 +32,15 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
 
-        // Настройка обработки ошибок
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(
                 (record, exception) -> {
-                    // Логика для Dead Letter Topic
-                    System.err.println("Failed to process message: " + record.value());
-                },
-                new FixedBackOff(1000L, 3) // Повторные попытки
-        );
+                    log.error("Failed to process message from topic {} partition {} offset {}: {}",
+                            record.topic(), record.partition(), record.offset(), exception.getMessage(), exception);
+                    },
+                    new FixedBackOff(1000L, 3) // Повторные попытки
+            );
         factory.setCommonErrorHandler(errorHandler);
 
-        // Можно настроить параллелизм
         factory.setConcurrency(3);
 
         return factory;

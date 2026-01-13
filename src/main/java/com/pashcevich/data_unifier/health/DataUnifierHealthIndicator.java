@@ -40,8 +40,8 @@ public class DataUnifierHealthIndicator implements HealthIndicator {
         Map<String, Object> postgresDetails = checkPostgres();
         Map<String, Object> mysqlDetails = checkMySQL();
 
-        boolean postgresHealthy = (boolean) postgresDetails.get("healthy");
-        boolean mysqlHealthy = (boolean) mysqlDetails.get("healthy");
+        boolean postgresHealthy = (Boolean) postgresDetails.get("healthy");
+        boolean mysqlHealthy = (Boolean) mysqlDetails.get("healthy");
 
         Health.Builder builder = postgresHealthy && mysqlHealthy ? Health.up() : Health.down();
 
@@ -64,6 +64,7 @@ public class DataUnifierHealthIndicator implements HealthIndicator {
                 details.put("users.status", "OK");
                 details.put("healthy", true);
             } catch (Exception e) {
+                log.error("Error checking PostgreSQL users: {}", e.getMessage(), e);
                 details.put("users.error", e.getMessage());
                 details.put("healthy", false);
             }
@@ -87,6 +88,7 @@ public class DataUnifierHealthIndicator implements HealthIndicator {
                 details.put("orders.status", "OK");
                 details.put("healthy", true);
             } catch (Exception e) {
+                log.error("Error checking MySQL orders: {}", e.getMessage(), e);
                 details.put("orders.error", e.getMessage());
                 details.put("healthy", false);
             }
@@ -105,7 +107,7 @@ public class DataUnifierHealthIndicator implements HealthIndicator {
             }
             return isValid;
         } catch (Exception e) {
-            log.warn("{} health check failed: {}", name, e.getMessage());
+            log.warn("{} health check failed: {}", name, e.getMessage(), e);
             return false;
         }
     }

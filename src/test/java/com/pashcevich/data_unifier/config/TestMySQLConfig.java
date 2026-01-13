@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 public class TestMySQLConfig {
 
     @Bean(name = "mysqlDataSource")
+    @Primary
     @ConfigurationProperties(prefix = "app.datasource.mysql")
     public DataSource mysqlDataSource() {
         return DataSourceBuilder.create()
@@ -41,10 +43,13 @@ public class TestMySQLConfig {
 
         HashMap<String, Object> properties = new HashMap<>();
         properties.put("hibernate.hbm2ddl.auto", "create-drop");
-        properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+        properties.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
         properties.put("hibernate.show_sql", false);
-        properties.put("hibernate.from_sql", true);
+        properties.put("hibernate.format_sql", true);
+        properties.put("hibernate.use_sql_comments", true);
+        properties.put("hibernate.connection.charSet", "UTF-8");
         em.setJpaPropertyMap(properties);
+
         return em;
     }
 
@@ -55,3 +60,4 @@ public class TestMySQLConfig {
         return transactionManager;
     }
 }
+

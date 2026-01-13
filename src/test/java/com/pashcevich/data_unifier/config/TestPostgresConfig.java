@@ -43,9 +43,11 @@ public class TestPostgresConfig {
 
         HashMap<String, Object> properties = new HashMap<>();
         properties.put("hibernate.hbm2ddl.auto", "create-drop");
-        properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+        properties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         properties.put("hibernate.show_sql", false);
         properties.put("hibernate.format_sql", true);
+        properties.put("hibernate.use_sql_comments", true);
+        properties.put("hibernate.connection.charSet", "UTF-8");
         em.setJpaPropertyMap(properties);
 
         return em;
