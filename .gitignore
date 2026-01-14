@@ -1,44 +1,17 @@
 # Compiled class file
-# Spring Boot
-target/
-*.jar
-*.war
-*.ear
-.DS_Store
-.gitignore
-.idea/
-*.iml
-*.ipr
-*.iws
-out/
-build/
-.gradle/
-.settings/
-.metadata/
-.mvn/
-.mvn/wrapper/maven-wrapper.properties
-.mvn/wrapper/maven-wrapper.jar
-.DS_Store
-Thumbs.db
-*.log
-
-# IDE
-.idea/
-*.iml
-*.ipr
-*.iws
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Maven
 *.class
-*.jar
-*.war
-*.ear
-target/
 
-# Application
-application.log
-logs/
+# Gradle
+.gradle/
+build/
+
+# IDEA
+.idea/
+*.iml
+out/
+
+# Eclipse
+.settings/
+.project
+.classpath
+bin/
