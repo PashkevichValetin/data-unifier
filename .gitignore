@@ -1,17 +1,31 @@
-# Compiled class file
+# Java
 *.class
+*.jar
+*.war
+*.ear
+*.nar
 
 # Gradle
 .gradle/
 build/
+!gradle/wrapper/gradle-wrapper.jar
 
-# IDEA
+# IDE
 .idea/
 *.iml
 out/
-
-# Eclipse
+*.ipr
+*.iws
 .settings/
-.project
 .classpath
-bin/
+.project
+.factorypath
+.recommenders/
+.DS_Store
+
+# Логи
+*.log
+logs/
+
+# Системные файлы
+Thumbs.db
