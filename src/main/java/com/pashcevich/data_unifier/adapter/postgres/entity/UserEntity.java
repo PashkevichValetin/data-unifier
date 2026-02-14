@@ -32,10 +32,4 @@ public class UserEntity {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    public UserEntity(String name, String email) {
-        this.name = name;
-        this.email = email;
-        this.registrationDate = LocalDateTime.now();
-    }
 }

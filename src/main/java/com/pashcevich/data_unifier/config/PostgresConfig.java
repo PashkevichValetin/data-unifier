@@ -2,8 +2,10 @@ package com.pashcevich.data_unifier.config;
 
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.persistence.EntityManagerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import javax.sql.DataSource;
 import java.util.HashMap;
 
+@Slf4j
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
@@ -34,45 +37,30 @@ public class PostgresConfig {
     @Value("${postgres.datasource.password}")
     private String password;
 
-    @Value("${postgres.datasource.driver-class-name}")
-    private String driverClassName;
-
     @Bean(name = "postgresDataSource")
     public DataSource postgresDataSource() {
-        System.out.println("=== Creating PostgreSQL DataSource ===");
-        System.out.println("URL: " + url);
-        System.out.println("Username: " + username);
-        System.out.println("Password length: " + (password != null ? password.length() : 0));
-        System.out.println("Testing connection...");
+        log.info("Configuring PostgreSQL datasource for URL: {}", url);
 
         HikariDataSource dataSource = new HikariDataSource();
         dataSource.setJdbcUrl(url);
         dataSource.setUsername(username);
         dataSource.setPassword(password);
-        dataSource.setDriverClassName(driverClassName);
+        dataSource.setDriverClassName("org.postgresql.Driver");
         dataSource.setMaximumPoolSize(10);
         dataSource.setMinimumIdle(2);
         dataSource.setConnectionTimeout(30000);
         dataSource.setMaxLifetime(1800000);
         dataSource.setPoolName("postgres-users-pool");
 
-        // Тест подключения
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.createStatement()) {
-            stmt.execute("SELECT 1");
-            System.out.println("SUCCESS: PostgreSQL connection established!");
-            System.out.println("SUCCESS: Test query executed successfully");
-        } catch (Exception e) {
-            System.err.println("ERROR: PostgreSQL connection failed: " + e.getMessage());
-            throw new RuntimeException("Failed to connect to PostgreSQL", e);
-        }
-
+        log.debug("PostgreSQL datasource configured. Pool: {}", dataSource.getPoolName());
         return dataSource;
     }
 
     @Bean(name = "postgresEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean postgresEntityManagerFactory(
-            @Qualifier("postgresDataSource") DataSource dataSource) {
+            @Qualifier("postgresDataSource") DataSource dataSource,
+            JpaProperties jpaProperties) {
+
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(dataSource);
         em.setPackagesToScan("com.pashcevich.data_unifier.adapter.postgres.entity");
@@ -81,15 +69,11 @@ public class PostgresConfig {
         HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
         em.setJpaVendorAdapter(vendorAdapter);
 
-        HashMap<String, Object> properties = new HashMap<>();
-        
-        properties.put("jakarta.persistence.schema-generation.database.action", "update");
+        HashMap<String, Object> properties = new HashMap<>(jpaProperties.getProperties());
         properties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-        properties.put("hibernate.show_sql", true);
-        properties.put("hibernate.format_sql", true);
-        properties.put("hibernate.hbm2ddl.auto", "update"); 
-        em.setJpaPropertyMap(properties);
+        properties.put("hibernate.hbm2ddl.auto", "validate");
 
+        em.setJpaPropertyMap(properties);
         return em;
     }
 

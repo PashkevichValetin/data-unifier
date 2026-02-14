@@ -2,8 +2,10 @@ package com.pashcevich.data_unifier.config;
 
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.persistence.EntityManagerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import javax.sql.DataSource;
 import java.util.HashMap;
 
+@Slf4j
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
@@ -34,27 +37,30 @@ public class MySQLConfig {
     @Value("${mysql.datasource.password}")
     private String password;
 
-    @Value("${mysql.datasource.driver-class-name}")
-    private String driverClassName;
-
     @Bean(name = "mysqlDataSource")
     public DataSource mysqlDataSource() {
+        log.info("Configuring MySQL datasource for URL: {}", url);
+
         HikariDataSource dataSource = new HikariDataSource();
         dataSource.setJdbcUrl(url);
         dataSource.setUsername(username);
         dataSource.setPassword(password);
-        dataSource.setDriverClassName(driverClassName);
+        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
         dataSource.setMaximumPoolSize(10);
         dataSource.setMinimumIdle(2);
         dataSource.setConnectionTimeout(30000);
         dataSource.setMaxLifetime(1800000);
         dataSource.setPoolName("mysql-orders-pool");
+
+        log.debug("MySQL datasource configured. Pool: {}", dataSource.getPoolName());
         return dataSource;
     }
 
     @Bean(name = "mysqlEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean mysqlEntityManagerFactory(
-            @Qualifier("mysqlDataSource") DataSource dataSource) {
+            @Qualifier("mysqlDataSource") DataSource dataSource,
+            JpaProperties jpaProperties) {
+
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(dataSource);
         em.setPackagesToScan("com.pashcevich.data_unifier.adapter.mysql.entity");
@@ -63,15 +69,11 @@ public class MySQLConfig {
         HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
         em.setJpaVendorAdapter(vendorAdapter);
 
-        HashMap<String, Object> properties = new HashMap<>();
-       
-        properties.put("jakarta.persistence.schema-generation.database.action", "update");
+        HashMap<String, Object> properties = new HashMap<>(jpaProperties.getProperties());
         properties.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
-        properties.put("hibernate.show_sql", true);
-        properties.put("hibernate.format_sql", true);
-        properties.put("hibernate.hbm2ddl.auto", "update");  
-        em.setJpaPropertyMap(properties);
+        properties.put("hibernate.hbm2ddl.auto", "validate");
 
+        em.setJpaPropertyMap(properties);
         return em;
     }
 

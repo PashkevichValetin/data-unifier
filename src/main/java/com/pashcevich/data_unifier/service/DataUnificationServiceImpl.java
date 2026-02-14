@@ -3,66 +3,120 @@ package com.pashcevich.data_unifier.service;
 import com.pashcevich.data_unifier.adapter.mysql.MySQLOrderAdapter;
 import com.pashcevich.data_unifier.adapter.postgres.PostgresUserAdapter;
 import com.pashcevich.data_unifier.adapter.kafka.producer.UnifiedDataProducer;
+import com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto;
 import com.pashcevich.data_unifier.exception.DataUnificationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class DataUnificationServiceImpl implements DataUnificationService {
 
-    private static final Logger logger = LoggerFactory.getLogger(DataUnificationServiceImpl.class);
-
-    @Autowired
-    private PostgresUserAdapter postgresUserAdapter;
-
-    @Autowired
-    private MySQLOrderAdapter mySQLOrderAdapter;
-
-    @Autowired
-    private UnifiedDataProducer unifiedDataProducer;
+    private final PostgresUserAdapter postgresUserAdapter;
+    private final MySQLOrderAdapter mySQLOrderAdapter;
+    private final UnifiedDataProducer unifiedDataProducer;
+    private final ProcessingMetrics processingMetrics;
 
     @Override
-    public void processUserData() {
+    @Transactional
+    public void processAllData() {
+        log.info("Starting complete data processing");
         try {
-            logger.info("Processing user data from PostgreSQL");
-            // Здесь будет логика обработки пользователей
-            logger.info("User data processing completed successfully");
+            processUserData();
+            processOrderData();
+            log.info("Complete data processing finished successfully");
+            processingMetrics.incrementProcessed();
         } catch (Exception e) {
-            logger.error("Error processing user data", e);
+            log.error("Failed to process all data", e);
+            throw new DataUnificationException("Failed to process all data", e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void processUserData() {
+        log.info("Starting user data processing");
+        try {
+            List<UnifiedCustomerDto> users = postgresUserAdapter.getAll();
+            sendToKafka(users, "user");
+        } catch (Exception e) {
             throw new DataUnificationException("Failed to process user data", e);
         }
     }
 
     @Override
+    @Transactional
     public void processOrderData() {
+        log.info("Starting order data processing");
         try {
-            logger.info("Processing order data from MySQL");
-            // Здесь будет логика обработки заказов
-            logger.info("Order data processing completed successfully");
+            List<UnifiedCustomerDto> orders = mySQLOrderAdapter.getAll();
+            sendToKafka(orders, "order");
         } catch (Exception e) {
-            logger.error("Error processing order data", e);
             throw new DataUnificationException("Failed to process order data", e);
         }
     }
 
     @Override
-    public void processAllData() {
-        try {
-            logger.info("Starting complete data processing");
-            processUserData();
-            processOrderData();
-            logger.info("Complete data processing completed successfully");
-        } catch (Exception e) {
-            logger.error("Error in complete data processing", e);
-            throw new DataUnificationException("Failed to complete data processing", e);
+    @Transactional
+    public void processUserById(Long userId) {
+        log.info("Processing user by id: {}", userId);
+        postgresUserAdapter.getById(userId)
+                .ifPresentOrElse(
+                        user -> {
+                            unifiedDataProducer.send(user);
+                            processingMetrics.incrementProcessed();
+                            log.debug("Successful processed user: {}", userId);
+                        },
+                        () -> {
+                            throw new DataUnificationException("User with id " + userId +
+                                    " not found");
+                        }
+                );
+    }
+
+    @Override
+    @Transactional
+    public long getProcessedCount() {
+        return processingMetrics.getProcessedCount();
+    }
+
+    private void sendToKafka(List<UnifiedCustomerDto> data, String dataType) {
+        data.forEach(item -> {
+            try {
+                unifiedDataProducer.send(item);
+                processingMetrics.incrementProcessed();
+                log.debug("Successful sent {}: {}", dataType, item.getId());
+            } catch (Exception e) {
+                log.error("Failed to send {}: {}, error: {}", dataType, item.getId(), e.getMessage(), e);
+            }
+        });
+    }
+
+    @Component
+    @RequiredArgsConstructor
+    public static class ProcessingMetrics {
+        private final AtomicLong processedCount = new AtomicLong(0);
+
+        public void incrementProcessed() {
+            processedCount.incrementAndGet();
+        }
+
+        public long getProcessedCount() {
+            return processedCount.get();
+        }
+
+        public void reset() {
+            processedCount.set(0);
         }
     }
 }
-
-
-
 
 
 

@@ -1,11 +1,33 @@
-FROM eclipse-temurin:21.0.4_7-jre-alpine
-RUN apk upgrade --no-cache
+# Build stage
+FROM gradle:8.7-jdk21-alpine AS build
 WORKDIR /app
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-COPY --chown=appuser:appgroup build/libs/*.jar app.jar
-USER appuser
-EXPOSE 8080
-ENTRYPOINT ["java", \
-    "-Djava.security.egd=file:/dev/./urandom", \
-    "-XX:+UseContainerSupport", \
-    "-jar", "/app/app.jar"]
+
+# Копируем файлы сборки
+COPY build.gradle settings.gradle gradlew ./
+COPY gradle ./gradle
+
+# Скачиваем зависимости
+RUN gradle dependencies --no-daemon
+
+# Копируем исходный код
+COPY src ./src
+
+# Собираем приложение
+RUN gradle clean bootJar --no-daemon
+
+# Runtime stage
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# Создаем non-root пользователя
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+# Копируем JAR из build stage
+COPY --from=build /app/build/libs/*.jar app.jar
+
+# Конфигурация
+EXPOSE 8080 9090
+
+# Точка входа
+ENTRYPOINT ["java", "-jar", "app.jar"]

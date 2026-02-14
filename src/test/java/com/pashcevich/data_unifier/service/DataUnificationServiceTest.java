@@ -60,7 +60,7 @@ public class DataUnificationServiceTest {
         //THEN
         assertNotNull(result);
         assertEquals(userId, result.getUserId());
-        verify(postgresUserAdapter).getUserById("1");
+        verify(postgresUserAdapter).getUserById("1L");
         verify(mySQLOrderAdapter).getOrdersByUserId(userId);
         verify(unifiedDataProducer).sendUnifiedCustomer(result);
     }

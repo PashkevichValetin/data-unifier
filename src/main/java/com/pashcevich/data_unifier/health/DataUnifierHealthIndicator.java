@@ -13,102 +13,93 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class DataUnifierHealthIndicator implements HealthIndicator {
 
-    private final DataSource mysqlDataSource;
-    private final DataSource postgresDataSource;
-    private final UserRepository userRepository;
-    private final OrderRepository orderRepository;
+    private static final int CONNECTION_VALIDATION_TIMEOUT = 2;
 
-    public DataUnifierHealthIndicator(
-            @Qualifier("mysqlDataSource") DataSource mysqlDataSource,
-            @Qualifier("postgresDataSource") DataSource postgresDataSource,
-            UserRepository userRepository,
-            OrderRepository orderRepository
-    ) {
-        this.mysqlDataSource = mysqlDataSource;
-        this.postgresDataSource = postgresDataSource;
-        this.userRepository = userRepository;
-        this.orderRepository = orderRepository;
-    }
+    private final DataSourceChecker postgresChecker;
+    private final DataSourceChecker mysqlChecker;
 
     @Override
     public Health health() {
-        Map<String, Object> postgresDetails = checkPostgres();
-        Map<String, Object> mysqlDetails = checkMySQL();
+        Map<String, Object> postgresDetails = postgresChecker.check();
+        Map<String, Object> mysqlDetails = mysqlChecker.check();
 
         boolean postgresHealthy = (Boolean) postgresDetails.get("healthy");
         boolean mysqlHealthy = (Boolean) mysqlDetails.get("healthy");
 
         Health.Builder builder = postgresHealthy && mysqlHealthy ? Health.up() : Health.down();
-
         builder.withDetail("postgres", postgresDetails);
         builder.withDetail("mysql", mysqlDetails);
 
         return builder.build();
     }
 
-    private Map<String, Object> checkPostgres() {
-        Map<String, Object> details = new HashMap<>();
-
-        boolean connectionHealthy = checkDataSource(postgresDataSource, "PostgreSQL");
-        details.put("connection", connectionHealthy ? "UP" : "DOWN");
-
-        if (connectionHealthy) {
-            try {
-                long userCount = userRepository.count();
-                details.put("users.count", userCount);
-                details.put("users.status", "OK");
-                details.put("healthy", true);
-            } catch (Exception e) {
-                log.error("Error checking PostgreSQL users: {}", e.getMessage(), e);
-                details.put("users.error", e.getMessage());
-                details.put("healthy", false);
-            }
-        } else {
-            details.put("healthy", false);
+    @Component("postgresChecker")
+    public static class PostgresChecker extends DataSourceChecker {
+        public PostgresChecker(
+                @Qualifier("postgresDataSource") DataSource dataSource,
+                UserRepository userRepository) {
+            super(dataSource, "PostgreSQL", userRepository::count, "users");
         }
-
-        return details;
     }
 
-    private Map<String, Object> checkMySQL() {
-        Map<String, Object> details = new HashMap<>();
-
-        boolean connectionHealthy = checkDataSource(mysqlDataSource, "MySQL");
-        details.put("connection", connectionHealthy ? "UP" : "DOWN");
-
-        if (connectionHealthy) {
-            try {
-                long orderCount = orderRepository.count();
-                details.put("orders.count", orderCount);
-                details.put("orders.status", "OK");
-                details.put("healthy", true);
-            } catch (Exception e) {
-                log.error("Error checking MySQL orders: {}", e.getMessage(), e);
-                details.put("orders.error", e.getMessage());
-                details.put("healthy", false);
-            }
-        } else {
-            details.put("healthy", false);
+    @Component("mysqlChecker")
+    public static class MySQLChecker extends DataSourceChecker {
+        public MySQLChecker(
+                @Qualifier("mysqlDataSource") DataSource dataSource,
+                OrderRepository orderRepository) {
+            super(dataSource, "MySQL", orderRepository::count, "orders");
         }
-
-        return details;
     }
 
-    private boolean checkDataSource(DataSource dataSource, String name) {
-        try (Connection conn = dataSource.getConnection()) {
-            boolean isValid = conn.isValid(2);
-            if (!isValid) {
-                log.warn("{} connection is invalid", name);
+    @RequiredArgsConstructor
+    public static abstract class DataSourceChecker {
+        private final DataSource dataSource;
+        private final String dbName;
+        private final Supplier<Long> countSupplier;
+        private final String entityName;
+
+        public Map<String, Object> check() {
+            Map<String, Object> details = new HashMap<>();
+
+            boolean connectionHealthy = checkConnection();
+            details.put("connection", connectionHealthy ? "UP" : "DOWN");
+
+            if (connectionHealthy) {
+                try {
+                    long count = countSupplier.get();
+                    details.put(entityName + ".count", count);
+                    details.put(entityName + ".status", "OK");
+                    details.put("healthy", true);
+                } catch (Exception e) {
+                    log.error("Error checking {} {}: {}", dbName, entityName, e.getMessage(), e);
+                    details.put(entityName + ".error", e.getMessage());
+                    details.put("healthy", false);
+                }
+            } else {
+                details.put("healthy", false);
             }
-            return isValid;
-        } catch (Exception e) {
-            log.warn("{} health check failed: {}", name, e.getMessage(), e);
-            return false;
+
+            return details;
+        }
+
+        private boolean checkConnection() {
+            try (Connection conn = dataSource.getConnection()) {
+                boolean isValid = conn.isValid(CONNECTION_VALIDATION_TIMEOUT);
+                if (!isValid) {
+                    log.warn("{} connection is invalid", dbName);
+                }
+                return isValid;
+            } catch (Exception e) {
+                log.warn("{} health check failed: {}", dbName, e.getMessage(), e);
+                return false;
+            }
         }
     }
 }

@@ -1,26 +1,40 @@
 package com.pashcevich.data_unifier.adapter.kafka.producer.dto;
 
-import lombok.Data;
+import lombok.*;
 
-import java.math.BigDecimal;
+        import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
-@Data
+
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UnifiedCustomerDto {
-    private Long userId;
+    private Long id;
     private String name;
     private String email;
-    private LocalDateTime registrationDate;
+    private String type;
+    private Instant timestamp;
 
-    private List<OrderData> orders = new ArrayList<>();
+    public UnifiedCustomerDto(Long id, String name, String email, String type) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.type = type;
+        this.timestamp = Instant.now();
+    }
 
-    @Data
-    public static class OrderData {
-        private Long orderId;
-        private BigDecimal amount;
-        private String status;
-        private LocalDateTime createdAt;
+    @Override
+    public String toString() {
+        return "UnifiedCustomerDto{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", type='" + type + '\'' +
+                ", timestamp=" + timestamp +
+                '}';
     }
 }

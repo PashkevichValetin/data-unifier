@@ -6,52 +6,24 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
-@Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 public class UnifiedDataProducer {
 
+    @Value("${kafka.topic.unified}")
+    private String topic;
+
     private final KafkaTemplate<String, UnifiedCustomerDto> kafkaTemplate;
+    private final RetryTemplate retryTemplate;
 
-    @Value("${app.kafka.topic.unified-customers}")
-    private String unifiedCustomersTopic;
-
-    public void sendUnifiedCustomer(UnifiedCustomerDto customer) {
-        log.debug("Attempting to send user {} to topic: {}", customer.getUserId(), unifiedCustomersTopic);
-        try {
-            String key = String.valueOf(customer.getUserId());
-
-            CompletableFuture<SendResult<String, UnifiedCustomerDto>> future = kafkaTemplate
-                    .send(unifiedCustomersTopic, key, customer);
-
-            future.whenComplete((result, ex) -> {
-                if (ex == null) {
-                    log.debug("Successfully sent unified data for user ID {} to topic {}",
-                            customer.getUserId(), unifiedCustomersTopic);
-                } else {
-                    log.error("Failed to send unified data for user ID {}: {}",
-                            customer.getUserId(), ex.getMessage(), ex);
-                }
-            });
-        } catch (Exception e) {
-            log.error("Error sending unified data to Kafka for user ID {}: {}",
-                    customer.getUserId(), e.getMessage(), e);
-            throw new RuntimeException("Failed to send data to Kafka", e);
-        }
-    }
-
-    public SendResult<String, UnifiedCustomerDto> sendUnifiedCustomerSync(UnifiedCustomerDto customer) {
-        try {
-            String key = String.valueOf(customer.getUserId());
-            return kafkaTemplate.send(unifiedCustomersTopic, key, customer).get();
-        } catch (Exception e) {
-            log.error("Synchronous send failed for user ID {}: {}",
-                    customer.getUserId(), e.getMessage(), e);
-            throw new RuntimeException("Synchronous send failed", e);
-        }
+    public void send(UnifiedCustomerDto dto) {
+        kafkaTemplate.send(topic, dto.getId().toString(), dto);
     }
 }

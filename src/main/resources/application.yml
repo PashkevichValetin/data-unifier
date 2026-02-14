@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: data-unifier
+
+# MySQL
+mysql:
+  datasource:
+    url: jdbc:mysql://localhost:3307/order_db?useSSL=false
+    username: app_user
+    password: password
+
+# PostgreSQL  
+postgres:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/user_db?ssl=false
+    username: app_user
+    password: password
+
+# Application (default values)
+app:
+  kafka:
+    enabled: false
+    topic:
+      unified-customers: unified-customers
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.pashcevich: DEBUG
+    org.springframework: INFO

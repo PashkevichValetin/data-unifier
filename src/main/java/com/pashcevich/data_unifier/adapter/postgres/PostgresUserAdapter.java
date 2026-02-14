@@ -1,63 +1,62 @@
 package com.pashcevich.data_unifier.adapter.postgres;
 
+import com.pashcevich.data_unifier.adapter.BaseDateAdapter;
+import com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto;
 import com.pashcevich.data_unifier.adapter.postgres.entity.UserEntity;
 import com.pashcevich.data_unifier.adapter.postgres.repository.UserRepository;
-import com.pashcevich.data_unifier.exception.UserAdapterException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
-public class PostgresUserAdapter {
+public class PostgresUserAdapter extends BaseDateAdapter<UserEntity> {
 
-    private static final Logger logger = LoggerFactory.getLogger(PostgresUserAdapter.class);
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    public List<UserEntity> getAllUsers() {
-        try {
-            logger.info("Fetching all users from PostgreSQL");
-            List<UserEntity> users = userRepository.findAll();
-            logger.info("Successfully fetched {} users", users.size());
-            return users;
-        } catch (Exception e) {
-            logger.error("Error fetching users from PostgreSQL", e);
-            throw new UserAdapterException("Failed to fetch users from PostgreSQL", e);
-        }
+    public PostgresUserAdapter(UserRepository userRepository) {
+        super();
+        this.userRepository = userRepository;
     }
 
-    public UserEntity getUserById(Long id) throws UserNotFoundException {
-        try {
-            logger.info("Fetching user with id {} from PostgreSQL", id);
-            Optional<UserEntity> user = userRepository.findById(id);
-            if (user.isPresent()) {
-                logger.info("Successfully fetched user with id {}", id);
-                return user.get();
-            } else {
-                logger.warn("User with id {} not found", id);
-                throw new UserNotFoundException("User with id " + id + " not found");
-            }
-        } catch (UserNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            logger.error("Error fetching user with id {} from PostgreSQL", id, e);
-            throw new UserAdapterException("Failed to fetch user with id " + id + " from PostgreSQL", e);
-        }
+    @Override
+    protected List<UserEntity> fetchAllData() throws Exception {
+        return userRepository.findAll();
     }
 
-    public void saveUser(UserEntity user) {
-        try {
-            logger.info("Saving user to PostgreSQL: {}", user.getName());
-            userRepository.save(user);
-            logger.info("Successfully saved user to PostgreSQL");
-        } catch (Exception e) {
-            logger.error("Error saving user to PostgreSQL", e);
-            throw new UserAdapterException("Failed to save user to PostgreSQL", e);
-        }
+    @Override
+    protected Optional<UserEntity> fetchById(Long id) throws Exception {
+        return userRepository.findById(id);
     }
+
+    @Override
+    protected String getAdapterName() {
+        return "PostgreSQL";
+    }
+
+    @Override
+    protected List<UnifiedCustomerDto> convertToUnified(List<UserEntity> users) {
+        return users.stream()
+                .map(this::convertToUnifiedCustomer)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    protected UnifiedCustomerDto convertSingleToUnified(UserEntity user) {
+        return convertToUnifiedCustomer(user);
+    }
+
+    private UnifiedCustomerDto convertToUnifiedCustomer(UserEntity user) {
+        return UnifiedCustomerDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .type("USER")
+                .timestamp(Instant.now())
+                .build();
+    }
+
 }

@@ -2,20 +2,16 @@ package com.pashcevich.data_unifier.controller;
 
 import com.pashcevich.data_unifier.service.DataUnificationService;
 import com.pashcevich.data_unifier.exception.DataUnificationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import static org.apache.kafka.common.requests.DeleteAclsResponse.log;
-
+@Slf4j
 @RestController
 @RequestMapping("/api/data-unification")
 public class DataUnificationController {
-
-    private static final Logger logger = LoggerFactory.getLogger(DataUnificationController.class);
 
     @Autowired
     private DataUnificationService dataUnificationService;
