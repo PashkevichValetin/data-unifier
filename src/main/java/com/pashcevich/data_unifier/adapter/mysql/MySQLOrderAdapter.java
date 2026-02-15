@@ -53,7 +53,7 @@ public class MySQLOrderAdapter {
 
         return UnifiedOrderDto.builder()
                 .id(orderEntity.getId())
-                .userId(orderEntity.getUserId())
+                .orderId(orderEntity.getUserId())
                 .status(orderEntity.getStatus())
                 .createdAt(orderEntity.getCreatedAt())
                 .totalAmount(orderEntity.getTotalAmount())

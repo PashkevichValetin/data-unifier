@@ -23,12 +23,11 @@ public class OrderEntity {
     private Long userId;
 
     @Column(name = "amount", nullable = false)
-    private BigDecimal amount;
+    private BigDecimal totalAmount;
 
     @Column(name = "status")
     private String status;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-
 }
