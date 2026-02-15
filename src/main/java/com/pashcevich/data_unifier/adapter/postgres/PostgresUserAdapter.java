@@ -2,6 +2,8 @@ package com.pashcevich.data_unifier.adapter.postgres;
 
 import com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto;
 import com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedOrderDto;
+import com.pashcevich.data_unifier.adapter.mysql.entity.OrderEntity;
+import com.pashcevich.data_unifier.adapter.mysql.repository.OrderRepository;
 import com.pashcevich.data_unifier.adapter.postgres.entity.UserEntity;
 import com.pashcevich.data_unifier.adapter.postgres.repository.UserRepository;
 import com.pashcevich.data_unifier.exception.DataUnificationException;
@@ -11,11 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static org.apache.kafka.common.requests.DeleteAclsResponse.log;
 
 @Slf4j
 @Component
@@ -23,6 +24,7 @@ import static org.apache.kafka.common.requests.DeleteAclsResponse.log;
 public class PostgresUserAdapter {
 
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository; // ✅ теперь внедрено
 
     public List<UnifiedCustomerDto> getAll() {
         try {
@@ -33,7 +35,7 @@ public class PostgresUserAdapter {
         }
     }
 
-    public Optional<UnifiedOrderDto> getById(Long id) {
+    public Optional<UnifiedCustomerDto> getById(Long id) {
         try {
             return fetchById(id)
                     .map(this::convertSingleToUnified);
@@ -66,13 +68,31 @@ public class PostgresUserAdapter {
     }
 
     private UnifiedCustomerDto convertToUnifiedCustomer(UserEntity user) {
+        List<UnifiedOrderDto> orders = fetchOrdersForUser(user.getId());
+
         return UnifiedCustomerDto.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .type("USER")
-                .timestamp(Instant.now())
+                .orders(orders)
+                .registrationDate(LocalDateTime.now())
                 .build();
     }
 
+    private List<UnifiedOrderDto> fetchOrdersForUser(Long userId) {
+        return orderRepository.findByUserId(userId)
+                .stream()
+                .map(this::convertToUnifiedOrder)
+                .collect(Collectors.toList());
+    }
+
+    private UnifiedOrderDto convertToUnifiedOrder(OrderEntity order) {
+        return UnifiedOrderDto.builder()
+                .id(order.getId())
+                .totalAmount(order.getTotalAmount())
+                .status(order.getStatus())
+                .createdAt(order.getCreatedAt())
+                .build();
+    }
 }
