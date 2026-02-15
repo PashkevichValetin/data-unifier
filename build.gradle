@@ -24,6 +24,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'com.zaxxer:HikariCP:5.0.1'
     
     // Retry support
     implementation 'org.springframework.retry:spring-retry'
