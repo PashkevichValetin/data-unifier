@@ -35,7 +35,7 @@ public class UnifiedDataProducer {
 
     public void sendOrder(UnifiedOrderDto dto) {
         try {
-            kafkaTemplate.send(ordersTopic, dto.getUserId().toString(), dto);
+            kafkaTemplate.send(ordersTopic, dto.getOrderId().toString(), dto);
             log.debug("Sent order {} to topic {}", dto.getId(), ordersTopic);
         } catch (Exception e) {
             log.error("Failed to send order {} to Kafka", dto.getId(), e);

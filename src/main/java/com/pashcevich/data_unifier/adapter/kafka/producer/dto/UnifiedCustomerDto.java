@@ -1,9 +1,11 @@
 package com.pashcevich.data_unifier.adapter.kafka.producer.dto;
 
 import lombok.*;
+import org.springframework.data.domain.jaxb.SpringDataJaxb;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -13,7 +15,8 @@ public class UnifiedCustomerDto {
     private Long id;
     private Long userId;
     private String name;
-    private String email;
     private String type;
-    private Instant timestamp; // ← был LocalDateTime, теперь Instant
+    private String email;
+    private LocalDateTime registrationDate;
+    private List<UnifiedOrderDto> orders;
 }

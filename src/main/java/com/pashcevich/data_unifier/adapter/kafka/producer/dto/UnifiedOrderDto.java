@@ -18,14 +18,8 @@ import java.time.LocalDateTime;
 public class UnifiedOrderDto {
 
     private Long id;
-    private Long userId;
+    private Long orderId;
     private String status;
     private LocalDateTime createdAt;
     private BigDecimal totalAmount;
-
-    @Bean
-    public KafkaTemplate<String, UnifiedOrderDto> kafkaTemplateOrder(
-            ProducerFactory<String, UnifiedOrderDto> producerFactory) {
-        return new KafkaTemplate<>(producerFactory);
-    }
 }

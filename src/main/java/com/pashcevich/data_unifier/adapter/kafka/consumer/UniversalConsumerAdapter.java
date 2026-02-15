@@ -41,13 +41,11 @@ public class UniversalConsumerAdapter {
                 customer.getUserId(), customer.getName(), customer.getEmail(),
                 customer.getRegistrationDate(),
                 customer.getOrders().size());
-
-        // Пример обработки: сохранение в лог деталей заказов
         if (!customer.getOrders().isEmpty()) {
             log.debug("Orders details for user {}:", customer.getUserId());
             customer.getOrders().forEach(order ->
                     log.debug("  Order ID: {}, Amount: {}, Status: {}, Created: {}",
-                            order.getOrderId(), order.getAmount(), order.getStatus(), order.getCreatedAt()));
+                            order.getOrderId(), order.getTotalAmount(), order.getStatus(), order.getCreatedAt()));
         }
 
         // Здесь можно добавить логику обработки данных (например, сохранение в БД)
