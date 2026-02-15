@@ -24,7 +24,7 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     private final UnifiedDataProducer unifiedDataProducer;
     private final ProcessingMetrics processingMetrics;
     private final TransactionTemplate transactionTemplate;
-    private final KafkaSenderService kafkaSenderService;// ← добавлен
+    private final KafkaSenderService kafkaSenderService;
 
     @Override
     public void processAllData() {
@@ -49,7 +49,7 @@ public class DataUnificationServiceImpl implements DataUnificationService {
         log.info("Starting user data processing");
         try {
             List<UnifiedCustomerDto> users = postgresUserAdapter.getAll();
-            kafkaSenderService.sendToKafka(users, "user");
+            kafkaSenderService.sendUsersToKafka(users);
         } catch (Exception e) {
             log.error("Failed to process user data", e);
             throw new DataUnificationException("Failed to process user data", e);
@@ -61,7 +61,7 @@ public class DataUnificationServiceImpl implements DataUnificationService {
         log.info("Starting order data processing");
         try {
             List<UnifiedOrderDto> orders = mySQLOrderAdapter.getAll();
-            kafkaSenderService.sendToKafka(orders, "order");
+            kafkaSenderService.sendOrdersToKafka(orders);
         } catch (Exception e) {
             log.error("Failed to process order data", e);
             throw new DataUnificationException("Failed to process order data", e);
@@ -75,7 +75,7 @@ public class DataUnificationServiceImpl implements DataUnificationService {
                 .ifPresentOrElse(
                         user -> {
                             try {
-                                unifiedDataProducer.sendOrder(user);
+                                unifiedDataProducer.sendCustomer(user);
                                 processingMetrics.incrementProcessed();
                                 log.debug("Successfully processed user: {}", userId);
                             } catch (Exception e) {
@@ -95,9 +95,3 @@ public class DataUnificationServiceImpl implements DataUnificationService {
         return processingMetrics.getProcessedCount();
     }
 }
-
-
-
-
-
-

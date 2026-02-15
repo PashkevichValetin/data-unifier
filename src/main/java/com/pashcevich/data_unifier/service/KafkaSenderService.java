@@ -24,21 +24,31 @@ public class KafkaSenderService {
             maxAttempts = 3,
             backoff = @org.springframework.retry.annotation.Backoff(delay = 1000, multiplier = 2)
     )
-    public <T> void sendToKafka(List<T> data, String dataType) {
-        log.info("Sending {} items of type {} to Kafka", data.size(), dataType);
+    public void sendUsersToKafka(List<UnifiedCustomerDto> users) {
+        log.info("Sending {} users to Kafka", users.size());
+        sendBatch(users, unifiedDataProducer::sendCustomer, "user");
+    }
 
-        data.stream()
-                .map(item -> {
-                    try {
-                        unifiedDataProducer.sendCustomer((UnifiedCustomerDto) item);
-                        processingMetrics.incrementProcessed();
-                        log.debug("Successfully sent {}: {}", dataType, extractId(item));
-                        return true;
-                    } catch (Exception e) {
-                        log.error("Failed to send {}: {}, error: {}", dataType, extractId(item), e.getMessage(), e);
-                        return false;
-                    }
-                });
+    @Retryable(
+            value = {Exception.class},
+            maxAttempts = 3,
+            backoff = @org.springframework.retry.annotation.Backoff(delay = 1000, multiplier = 2)
+    )
+    public void sendOrdersToKafka(List<UnifiedOrderDto> orders) {
+        log.info("Sending {} orders to Kafka", orders.size());
+        sendBatch(orders, unifiedDataProducer::sendOrder, "order");
+    }
+
+    private <T> void sendBatch(List<T> items, java.util.function.Consumer<T> sendFn, String type) {
+        for (T item : items) {
+            try {
+                sendFn.accept(item);
+                processingMetrics.incrementProcessed();
+                log.debug("Successfully sent {}: {}", type, extractId(item));
+            } catch (Exception e) {
+                log.error("Failed to send {}: {}, error: {}", type, extractId(item), e.getMessage(), e);
+            }
+        }
     }
 
     private String extractId(Object item) {
