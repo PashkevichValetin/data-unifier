@@ -30,7 +30,7 @@ public class KafkaSenderService {
         data.stream()
                 .map(item -> {
                     try {
-                        unifiedDataProducer.send((UnifiedCustomerDto) item);
+                        unifiedDataProducer.sendCustomer((UnifiedCustomerDto) item);
                         processingMetrics.incrementProcessed();
                         log.debug("Successfully sent {}: {}", dataType, extractId(item));
                         return true;
@@ -38,8 +38,7 @@ public class KafkaSenderService {
                         log.error("Failed to send {}: {}, error: {}", dataType, extractId(item), e.getMessage(), e);
                         return false;
                     }
-                })
-                .forEach(_ -> {}); // force execution
+                });
     }
 
     private String extractId(Object item) {
