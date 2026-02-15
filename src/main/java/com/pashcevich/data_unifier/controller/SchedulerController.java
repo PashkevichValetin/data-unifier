@@ -1,7 +1,8 @@
 package com.pashcevich.data_unifier.controller;
 
-import com.pashcevich.data_unifier.dto.StartsResponse;
+import com.pashcevich.data_unifier.dto.SchedulerStats;
 import com.pashcevich.data_unifier.scheduler.DataUnificationScheduler;
+import com.pashcevich.data_unifier.scheduler.SchedulerMetricsService;
 import com.pashcevich.data_unifier.service.DataUnificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SchedulerController {
 
     private final DataUnificationService dataUnificationService;
-    private final DataUnificationScheduler.SchedulerMetrics schedulerMetrics;
-
-    // ✅ Добавлено: блокировка на одновременный запуск
+    private final SchedulerMetricsService schedulerMetricsService;
     private final AtomicBoolean isProcessing = new AtomicBoolean(false);
 
     @PostMapping("/trigger")
@@ -42,13 +41,13 @@ public class SchedulerController {
         log.info("Processing triggered manually");
         try {
             dataUnificationService.processAllData();
-            schedulerMetrics.recordSuccess(Instant.now());
+            schedulerMetricsService.recordSuccess(Instant.now());
             return ResponseEntity.ok(Map.of(
                     "message", "Processing triggered successfully",
                     "timestamp", Instant.now()
             ));
         } catch (Exception e) {
-            schedulerMetrics.recordFailure();
+            schedulerMetricsService.recordFailure();
             log.error("Failed to trigger processing", e);
 
             return ResponseEntity.status(500).body(Map.of(
@@ -63,20 +62,20 @@ public class SchedulerController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<StartsResponse> getStats() {
-        var stats = schedulerMetrics.getStats();
-        return ResponseEntity.ok(new StartsResponse(
-                stats.getTotalRuns(),
-                stats.getSuccessfulRuns(),
-                stats.getFailedRuns(),
-                stats.getSuccessRate(),
-                stats.getLastSuccessfulRun()
+    public ResponseEntity<SchedulerStats> getStats() {
+        var stats = schedulerMetricsService.getStats();
+        return ResponseEntity.ok(new SchedulerStats(
+                stats.totalRuns(),
+                stats.successfulRuns(),
+                stats.failedRuns(),
+                stats.successRatePercent(),
+                stats.lastSuccessfulRun()
         ));
     }
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> getHealth() {
-        var lastRun = schedulerMetrics.getLastSuccessfulRun();
+        var lastRun = schedulerMetricsService.getLastSuccessfulRun();
         if (lastRun == null) {
             return ResponseEntity.status(503).body(Map.of(
                     "status", "DEGRADED",
