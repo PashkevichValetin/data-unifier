@@ -91,11 +91,8 @@ public class DataUnifierHealthIndicator implements HealthIndicator {
 
         private boolean checkConnection() {
             try (Connection conn = dataSource.getConnection()) {
-                boolean isValid = conn.isValid(CONNECTION_VALIDATION_TIMEOUT);
-                if (!isValid) {
-                    log.warn("{} connection is invalid", dbName);
-                }
-                return isValid;
+                if (conn.isClosed()) return false;
+                return conn.isValid(CONNECTION_VALIDATION_TIMEOUT);
             } catch (Exception e) {
                 log.warn("{} health check failed: {}", dbName, e.getMessage(), e);
                 return false;
