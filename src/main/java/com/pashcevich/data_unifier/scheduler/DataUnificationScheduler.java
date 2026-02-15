@@ -38,7 +38,7 @@ public class DataUnificationScheduler {
             dataUnificationService.processAllData();
             long afterCount = dataUnificationService.getProcessedCount();
 
-            metrics.recordSuccess(startTime, beforeCount, afterCount);
+            metrics.recordSuccess(startTime);
             logProcessingResult(startTime, beforeCount, afterCount);
 
         } catch (Exception e) {
@@ -70,7 +70,7 @@ public class DataUnificationScheduler {
         private final AtomicInteger failedRuns = new AtomicInteger(0);
         private Instant lastSuccessfulRun;
 
-        public void recordSuccess(Instant startTime, long beforeCount, long afterCount) {
+        public void recordSuccess(Instant startTime) {
             successfulRuns.incrementAndGet();
             lastSuccessfulRun = startTime;
         }
@@ -93,10 +93,14 @@ public class DataUnificationScheduler {
             return SchedulerStats.builder()
                     .successfulRuns(successfulRuns.get())
                     .failedRuns(failedRuns.get())
-                    .lastSuccessfulRun(lastSuccessfulRun)
+                    .lastSuccessfulRun(lastSuccessfulRun) // ✅ Добавлено
                     .totalRuns(successfulRuns.get() + failedRuns.get())
                     .successRate(calculateSuccessRate())
                     .build();
+        }
+
+        public Instant getLastSuccessfulRun() {
+            return lastSuccessfulRun;
         }
 
         private double calculateSuccessRate() {
