@@ -1,4 +1,4 @@
-package com.pashcevich.data_unifier.health;
+package com.pashcevich.data_unifier.listener.health;
 
 import com.pashcevich.data_unifier.adapter.mysql.repository.OrderRepository;
 import com.pashcevich.data_unifier.adapter.postgres.repository.UserRepository;
