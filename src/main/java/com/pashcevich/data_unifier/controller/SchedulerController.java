@@ -10,11 +10,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @RestController
@@ -25,10 +24,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class SchedulerController {
 
     private final DataUnificationService dataUnificationService;
+    private final DataUnificationScheduler.SchedulerMetrics schedulerMetrics;
 
-    private final AtomicLong successfulRuns = new AtomicLong(0);
-    private final AtomicLong failedRuns = new AtomicLong(0);
-    private final AtomicReference<Instant> lastSuccessfulRun = new AtomicReference<>(null);
+    // ✅ Добавлено: блокировка на одновременный запуск
     private final AtomicBoolean isProcessing = new AtomicBoolean(false);
 
     @PostMapping("/trigger")
@@ -44,15 +42,13 @@ public class SchedulerController {
         log.info("Processing triggered manually");
         try {
             dataUnificationService.processAllData();
-            lastSuccessfulRun.set(Instant.now());
-            successfulRuns.incrementAndGet();
-
+            schedulerMetrics.recordSuccess(Instant.now());
             return ResponseEntity.ok(Map.of(
                     "message", "Processing triggered successfully",
-                    "timestamp", lastSuccessfulRun.get()
+                    "timestamp", Instant.now()
             ));
         } catch (Exception e) {
-            failedRuns.incrementAndGet();
+            schedulerMetrics.recordFailure();
             log.error("Failed to trigger processing", e);
 
             return ResponseEntity.status(500).body(Map.of(
@@ -68,24 +64,19 @@ public class SchedulerController {
 
     @GetMapping("/stats")
     public ResponseEntity<StartsResponse> getStats() {
-        long success = successfulRuns.get();
-        long failed = failedRuns.get();
-        long totalRuns = success + failed;
-        double successRate = totalRuns == 0 ? 0 : (double) success / totalRuns * 100;
-
+        var stats = schedulerMetrics.getStats();
         return ResponseEntity.ok(new StartsResponse(
-                totalRuns,
-                success,
-                failed,
-                Math.round(successRate * 100.0) / 100.0,
-                lastSuccessfulRun.get()
+                stats.getTotalRuns(),
+                stats.getSuccessfulRuns(),
+                stats.getFailedRuns(),
+                stats.getSuccessRate(),
+                stats.getLastSuccessfulRun()
         ));
     }
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> getHealth() {
-        Instant lastRun = lastSuccessfulRun.get();
-
+        var lastRun = schedulerMetrics.getLastSuccessfulRun();
         if (lastRun == null) {
             return ResponseEntity.status(503).body(Map.of(
                     "status", "DEGRADED",
@@ -94,7 +85,7 @@ public class SchedulerController {
             ));
         }
 
-        long minutesSinceLastRun = Instant.now().getEpochSecond() - lastRun.getEpochSecond() / 60;
+        long minutesSinceLastRun = Duration.between(lastRun, Instant.now()).toMinutes();
 
         if (minutesSinceLastRun > 30) {
             return ResponseEntity.status(503).body(Map.of(

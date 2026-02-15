@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -46,14 +47,13 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<Map<String, Object>> buildErrorResponse(HttpStatus status, String message, String errorCode, Exception ex) {
-        var errorResponse = Map.of(
-                "timestamp", Instant.now(),
-                "status", status.value(),
-                "error", status.getReasonPhrase(),
-                "massage", message,
-                "errorCode", errorCode,
-                "path", Thread.currentThread().getName()
-        );
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("timestamp", Instant.now());
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", status.getReasonPhrase());
+        errorResponse.put("message", message);
+        errorResponse.put("errorCode", errorCode);
+        errorResponse.put("path", Thread.currentThread().getName());
 
         return new ResponseEntity<>(errorResponse, status);
     }
