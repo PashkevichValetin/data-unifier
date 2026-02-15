@@ -27,7 +27,7 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, UnifiedCustomerDto> kafkaTemplate(
+    public KafkaTemplate<String, UnifiedCustomerDto> kafkaTemplateOrder(
             ProducerFactory<String, UnifiedCustomerDto> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
