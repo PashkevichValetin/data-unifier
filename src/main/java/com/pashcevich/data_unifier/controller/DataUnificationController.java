@@ -4,10 +4,14 @@ import com.pashcevich.data_unifier.service.DataUnificationService;
 import com.pashcevich.data_unifier.exception.DataUnificationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @RestController
@@ -17,54 +21,97 @@ public class DataUnificationController {
 
     private final DataUnificationService dataUnificationService;
 
-    @PostMapping("/process-all")
-    public ResponseEntity<String> processAllData() {
+    private static final Set<String> VALID_TYPES = Set.of("all", "users", "orders");
+
+    @PostMapping("/process/{type}")
+    public ResponseEntity<Map<String, Object>> processData(@PathVariable String type) {
+        // ДОБАВЛЕНА НОРМАЛИЗАЦИЯ
+        String normalizedType = type.toLowerCase().trim();
+        log.info("Starting data processing for type: {}", normalizedType);
+
+        if (!VALID_TYPES.contains(normalizedType)) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Invalid type",
+                    "valid_types", VALID_TYPES,
+                    "timestamp", Instant.now()
+            ));
+        }
+
         try {
-            log.info("Starting complete data processing");
-            dataUnificationService.processAllData();
-            return ResponseEntity.ok("Data processing completed successfully");
+            Instant startTime = Instant.now();
+
+            switch (normalizedType) { // ИСПОЛЬЗУЕМ НОРМАЛИЗОВАННЫЙ ТИП
+                case "all":
+                    dataUnificationService.processAllData();
+                    break;
+                case "users":
+                    dataUnificationService.processUserData();
+                    break;
+                case "orders":
+                    dataUnificationService.processOrderData();
+                    break;
+            }
+
+            long duration = Duration.between(startTime, Instant.now()).toMillis();
+
+            return ResponseEntity.ok(Map.of(
+                    "message", normalizedType + " data processing completed successfully",
+                    "type", normalizedType,
+                    "duration_ms", duration,
+                    "timestamp", Instant.now()
+            ));
+
         } catch (DataUnificationException e) {
-            log.error("Data processing failed", e);
+            log.error("Data processing failed for type: {}", normalizedType, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Data processing failed: " + e.getMessage());
+                    .body(Map.of(
+                            "error", "Data processing failed",
+                            "type", normalizedType,
+                            "message", e.getMessage(),
+                            "timestamp", Instant.now()
+                    ));
         } catch (Exception e) {
-            log.error("Unexpected error during data processing", e);
+            log.error("Unexpected error during data processing for type: {}", normalizedType, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Unexpected error occurred");
+                    .body(Map.of(
+                            "error", "Unexpected error occurred",
+                            "type", normalizedType,
+                            "message", e.getMessage(),
+                            "timestamp", Instant.now()
+                    ));
         }
     }
 
-    @PostMapping("/process-users")
-    public ResponseEntity<String> processUsers() {
+    @PostMapping("/process/user/{userId}")
+    public ResponseEntity<Map<String, Object>> processUserById(@PathVariable Long userId) {
+        log.info("Processing user by id: {}", userId);
+
         try {
-            log.info("Starting user data processing");
-            dataUnificationService.processUserData();
-            return ResponseEntity.ok("User data processing completed successfully");
+            dataUnificationService.processUserById(userId);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "User processed successfully",
+                    "userId", userId,
+                    "timestamp", Instant.now()
+            ));
+
         } catch (DataUnificationException e) {
-            log.error("User data processing failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("User data processing failed: " + e.getMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error during user data processing", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Unexpected error occurred");
+            log.error("Failed to process user: {}", userId, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                            "error", "User processing failed",
+                            "userId", userId,
+                            "message", e.getMessage(),
+                            "timestamp", Instant.now()
+                    ));
         }
     }
 
-    @PostMapping("/process-orders")
-    public ResponseEntity<String> processOrders() {
-        try {
-            log.info("Starting order data processing");
-            dataUnificationService.processOrderData();
-            return ResponseEntity.ok("Order data processing completed successfully");
-        } catch (DataUnificationException e) {
-            log.error("Order data processing failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Order data processing failed: " + e.getMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error during order data processing", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Unexpected error occurred");
-        }
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getStats() {
+        return ResponseEntity.ok(Map.of(
+                "processed_count", dataUnificationService.getProcessedCount(),
+                "timestamp", Instant.now()
+        ));
     }
 }

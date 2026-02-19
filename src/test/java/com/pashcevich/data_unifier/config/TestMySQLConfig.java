@@ -44,9 +44,9 @@ public class TestMySQLConfig {
         HashMap<String, Object> properties = new HashMap<>();
         properties.put("hibernate.hbm2ddl.auto", "create-drop");
         properties.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
-        properties.put("hibernate.show_sql", false);
-        properties.put("hibernate.format_sql", true);
-        properties.put("hibernate.use_sql_comments", true);
+        properties.put("hibernate.show_sql", "false"); // ИСПРАВЛЕНО: String вместо boolean
+        properties.put("hibernate.format_sql", "true"); // ИСПРАВЛЕНО: String вместо boolean
+        properties.put("hibernate.use_sql_comments", "true"); // ИСПРАВЛЕНО: String вместо boolean
         properties.put("hibernate.connection.charSet", "UTF-8");
         em.setJpaPropertyMap(properties);
 
@@ -60,4 +60,3 @@ public class TestMySQLConfig {
         return transactionManager;
     }
 }
-

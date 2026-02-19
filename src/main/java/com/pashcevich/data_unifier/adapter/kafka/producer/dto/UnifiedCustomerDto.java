@@ -1,10 +1,13 @@
 package com.pashcevich.data_unifier.adapter.kafka.producer.dto;
 
-import lombok.*;
-import org.springframework.data.domain.jaxb.SpringDataJaxb;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -12,11 +15,34 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UnifiedCustomerDto {
+
     private Long id;
+
     private Long userId;
+
     private String name;
+
     private String type;
+
     private String email;
+
     private LocalDateTime registrationDate;
-    private List<UnifiedOrderDto> orders;
+
+    @Builder.Default
+    private List<UnifiedOrderDto> orders = new ArrayList<>(); // Всегда не null
+
+    public List<UnifiedOrderDto> getOrders() {
+        return orders != null ? orders : Collections.emptyList();
+    }
+
+    public void addOrder(UnifiedOrderDto order) {
+        if (orders == null) {
+            orders = new ArrayList<>();
+        }
+        orders.add(order);
+    }
+
+    public boolean hasOrders() {
+        return orders != null && !orders.isEmpty();
+    }
 }

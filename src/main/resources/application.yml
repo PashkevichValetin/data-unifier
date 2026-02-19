@@ -2,31 +2,269 @@ spring:
   application:
     name: data-unifier
 
-# MySQL
-mysql:
-  datasource:
-    url: jdbc:mysql://localhost:3307/order_db?useSSL=false
-    username: app_user
-    password: password
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
-# PostgreSQL  
-postgres:
-  datasource:
-    url: jdbc:postgresql://localhost:5433/user_db?ssl=false
-    username: app_user
-    password: password
-
-# Application (default values)
-app:
+  # Kafka настройки
   kafka:
-    enabled: false
-    topic:
-      unified-customers: unified-customers
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: data-unifier-group-${spring.profiles.active}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      max-poll-records: 500
+      fetch-max-wait: 500
+      fetch-min-size: 1
+      max-partition-fetch-bytes: 1048576
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: >
+          unifiedCustomerDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto,
+          unifiedOrderDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedOrderDto
+        spring.json.use.type.headers: false
+        max.poll.interval.ms: 300000
+        session.timeout.ms: 45000
+        heartbeat.interval.ms: 3000
 
+    producer:
+      retries: 3
+      acks: all
+      compression-type: snappy
+      batch-size: 16384
+      linger-ms: 5
+      buffer-memory: 33554432
+      max-in-flight-requests-per-connection: 5
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: >
+          unifiedCustomerDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto,
+          unifiedOrderDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedOrderDto
+        enable.idempotence: true
+        max.request.size: 1048576
+        request.timeout.ms: 30000
+        delivery.timeout.ms: 120000
+
+    listener:
+      concurrency: 3
+      type: single
+      ack-mode: manual_immediate
+      poll-timeout: 1500
+      missing-topics-fatal: false
+
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 20
+          fetch_size: 100
+        order_inserts: true
+        order_updates: true
+        generate_statistics: ${HIBERNATE_STATS:false}
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
+    show-sql: ${SHOW_SQL:false}
+    open-in-view: false
+
+  transaction:
+    default-timeout: 30
+
+# Настройки приложения
+app:
+  scheduler:
+    enabled: ${SCHEDULER_ENABLED:true}
+    cron: ${SCHEDULER_CRON:0 */5 * * * *}
+    health:
+      threshold:
+        minutes: ${SCHEDULER_HEALTH_THRESHOLD:10}
+    retry-after:
+      seconds: ${SCHEDULER_RETRY_AFTER:30}
+
+  kafka:
+    topic:
+      unified-customers: unified-customers-${spring.profiles.active}
+      unified-orders: unified-orders-${spring.profiles.active}
+    producer:  # ОБЪЕДИНЕНО - здесь все настройки producer
+      timeout-seconds: ${KAFKA_PRODUCER_TIMEOUT:30}
+      pool:
+        size: ${KAFKA_PRODUCER_POOL_SIZE:5}
+    consumer:
+      pool:
+        size: ${KAFKA_CONSUMER_POOL_SIZE:3}
+
+  batch:
+    size: ${BATCH_SIZE:100}
+
+  retry:
+    max-attempts: 3
+    initial-delay: 1000
+    multiplier: 2.0
+    max-delay: 10000
+
+# Сервер
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never
+    include-exception: false
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+
+# Actuator мониторинг
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,threaddump,heapdump
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: ${spring.profiles.active}
+    enable:
+      kafka: true
+      kafka.consumer: true
+      kafka.producer: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+        step: 1m
+        descriptions: true
+  tracing:
+    sampling:
+      probability: 1.0
+  observations:
+    annotations:
+      enabled: true
+
+# Логирование
+logging:
+  level:
+    com.pashcevich.data_unifier: ${LOG_LEVEL:DEBUG}
+    org.springframework.kafka: ${KAFKA_LOG_LEVEL:INFO}
+    org.springframework.transaction: ${TX_LOG_LEVEL:INFO}
+    com.zaxxer.hikari: ${HIKARI_LOG_LEVEL:INFO}
+    org.hibernate: ${HIBERNATE_LOG_LEVEL:WARN}
+    org.hibernate.SQL: ${HIBERNATE_SQL_LOG_LEVEL:DEBUG}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/${spring.application.name}.log
+    max-size: 100MB
+    max-history: 30
+
+# Документация API
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+  packages-to-scan: com.pashcevich.data_unifier.controller
+
+---
+# Профиль для разработки
+spring:
+  config:
+    activate:
+      on-profile: dev
+  kafka:
+    bootstrap-servers: localhost:9092
+  datasource:
+    postgres:
+      jdbc-url: jdbc:postgresql://localhost:5432/users_db_dev
+      username: postgres
+      password: postgres
+      driver-class-name: org.postgresql.Driver
+    mysql:
+      jdbc-url: jdbc:mysql://localhost:3306/orders_db_dev
+      username: root
+      password: root
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    postgres:
+      properties:
+        hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+    mysql:
+      properties:
+        hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
 
 logging:
   level:
-    com.pashcevich: DEBUG
-    org.springframework: INFO
+    com.pashcevich.data_unifier: DEBUG
+    org.springframework.kafka: DEBUG
+
+---
+# Профиль для тестирования
+spring:
+  config:
+    activate:
+      on-profile: test
+  kafka:
+    bootstrap-servers: ${TEST_KAFKA_SERVERS:localhost:9092}
+  datasource:
+    postgres:
+      jdbc-url: ${TEST_POSTGRES_URL:jdbc:postgresql://localhost:5432/users_db_test}
+    mysql:
+      jdbc-url: ${TEST_MYSQL_URL:jdbc:mysql://localhost:3306/orders_db_test}
+
+logging:
+  level:
+    com.pashcevich.data_unifier: DEBUG
+
+---
+# Профиль для продакшена
+spring:
+  config:
+    activate:
+      on-profile: prod
+  kafka:
+    bootstrap-servers: ${PROD_KAFKA_SERVERS:broker1:9092,broker2:9092,broker3:9092}
+    producer:
+      retries: 5
+    consumer:
+      enable-auto-commit: false
+  datasource:
+    postgres:
+      jdbc-url: ${PROD_POSTGRES_URL}
+      username: ${PROD_POSTGRES_USER}
+      password: ${PROD_POSTGRES_PASSWORD}
+    mysql:
+      jdbc-url: ${PROD_MYSQL_URL}
+      username: ${PROD_MYSQL_USER}
+      password: ${PROD_MYSQL_PASSWORD}
+  jpa:
+    postgres:
+      properties:
+        hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+        hibernate.hbm2ddl.auto: validate
+    mysql:
+      properties:
+        hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+        hibernate.hbm2ddl.auto: validate
+
+logging:
+  level:
+    com.pashcevich.data_unifier: INFO
+    org.springframework.kafka: INFO
+  file:
+    name: /var/log/${spring.application.name}.log

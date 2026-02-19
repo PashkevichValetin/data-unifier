@@ -1,4 +1,4 @@
-package com.pashcevich.data_unifier.controller.handler;
+package com.pashcevich.data_unifier.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pashcevich.data_unifier.exception.AdapterException;
@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Interval server error", "INTERVAL_ERROR", ex);
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", "INTERNAL_ERROR", ex);
     }
 
     private ResponseEntity<Map<String, Object>> buildErrorResponse(HttpStatus status, String message, String errorCode, Exception ex) {

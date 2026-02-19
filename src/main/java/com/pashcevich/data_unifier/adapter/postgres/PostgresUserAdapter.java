@@ -1,9 +1,6 @@
 package com.pashcevich.data_unifier.adapter.postgres;
 
 import com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto;
-import com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedOrderDto;
-import com.pashcevich.data_unifier.adapter.mysql.entity.OrderEntity;
-import com.pashcevich.data_unifier.adapter.mysql.repository.OrderRepository;
 import com.pashcevich.data_unifier.adapter.postgres.entity.UserEntity;
 import com.pashcevich.data_unifier.adapter.postgres.repository.UserRepository;
 import com.pashcevich.data_unifier.exception.DataUnificationException;
@@ -11,9 +8,6 @@ import com.pashcevich.data_unifier.exception.UserAdapterException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -24,75 +18,60 @@ import java.util.stream.Collectors;
 public class PostgresUserAdapter {
 
     private final UserRepository userRepository;
-    private final OrderRepository orderRepository; // ✅ теперь внедрено
 
-    public List<UnifiedCustomerDto> getAll() {
+    public List<UserEntity> getAllUsers() {
         try {
-            return convertToUnified(fetchAllData());
+            log.debug("Fetching all users from PostgreSQL");
+            return userRepository.findAll();
         } catch (Exception e) {
             log.error("Failed to fetch all users", e);
             throw new UserAdapterException("Failed to fetch users", e);
         }
     }
 
-    public Optional<UnifiedCustomerDto> getById(Long id) {
+    public Optional<UserEntity> getUserById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+
         try {
-            return fetchById(id)
-                    .map(this::convertSingleToUnified);
+            log.debug("Fetching user by id: {}", id);
+            return userRepository.findById(id);
         } catch (Exception e) {
             log.error("Failed to fetch user by id: {}", id, e);
             throw new DataUnificationException("Failed to fetch user by id: " + id, e);
         }
     }
 
-    protected List<UserEntity> fetchAllData() throws Exception {
-        return userRepository.findAll();
-    }
-
-    protected Optional<UserEntity> fetchById(Long id) throws Exception {
-        return userRepository.findById(id);
-    }
-
-    protected String getAdapterName() {
-        return "PostgreSQL";
-    }
-
-    protected List<UnifiedCustomerDto> convertToUnified(List<UserEntity> users) {
-        return users.stream()
-                .map(this::convertToUnifiedCustomer)
-                .collect(Collectors.toList());
-    }
-
-    protected UnifiedCustomerDto convertSingleToUnified(UserEntity user) {
-        return convertToUnifiedCustomer(user);
-    }
-
-    private UnifiedCustomerDto convertToUnifiedCustomer(UserEntity user) {
-        List<UnifiedOrderDto> orders = fetchOrdersForUser(user.getId());
+    public UnifiedCustomerDto convertToDto(UserEntity user) {
+        if (user == null) {
+            return null;
+        }
 
         return UnifiedCustomerDto.builder()
                 .id(user.getId())
+                .userId(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .type("USER")
-                .orders(orders)
-                .registrationDate(LocalDateTime.now())
+                .registrationDate(user.getRegistrationDate())
                 .build();
     }
 
-    private List<UnifiedOrderDto> fetchOrdersForUser(Long userId) {
-        return orderRepository.findByUserId(userId)
-                .stream()
-                .map(this::convertToUnifiedOrder)
+    public List<UnifiedCustomerDto> convertToDtoList(List<UserEntity> users) {
+        if (users == null) {
+            return List.of();
+        }
+        return users.stream()
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
-    private UnifiedOrderDto convertToUnifiedOrder(OrderEntity order) {
-        return UnifiedOrderDto.builder()
-                .id(order.getId())
-                .totalAmount(order.getTotalAmount())
-                .status(order.getStatus())
-                .createdAt(order.getCreatedAt())
-                .build();
+    public boolean existsById(Long id) {
+        return userRepository.existsById(id);
+    }
+
+    public long count() {
+        return userRepository.count();
     }
 }

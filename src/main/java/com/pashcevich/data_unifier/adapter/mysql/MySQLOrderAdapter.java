@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -19,44 +20,66 @@ public class MySQLOrderAdapter {
 
     private final OrderRepository orderRepository;
 
-    public List<UnifiedOrderDto> getAll() {
+    public List<OrderEntity> getAllOrders() {
         try {
-            return convertToUnified(fetchAllData());
+            log.debug("Fetching all orders from MySQL");
+            return orderRepository.findAll();  // Теперь возвращает Entity
         } catch (Exception e) {
             log.error("Failed to fetch all orders", e);
             throw new DataUnificationException("Failed to fetch orders", e);
         }
     }
 
-    protected List<OrderEntity> fetchAllData() throws Exception {
-        return orderRepository.findAll();
+    public List<OrderEntity> getOrdersByUserId(Long userId) {
+        try {
+            log.debug("Fetching orders for user: {}", userId);
+            return orderRepository.findByUserId(userId);  // Теперь возвращает Entity
+        } catch (Exception e) {
+            log.error("Failed to fetch orders for user id: {}", userId, e);
+            throw new DataUnificationException("Failed to fetch orders for user " + userId, e);
+        }
     }
 
-    protected Optional<OrderEntity> fetchById(Long id) throws Exception {
-        return orderRepository.findById(id);
+    public Optional<OrderEntity> getOrderById(Long id) {
+        try {
+            return orderRepository.findById(id);
+        } catch (Exception e) {
+            log.error("Failed to fetch order by id: {}", id, e);
+            throw new DataUnificationException("Failed to fetch order by id: " + id, e);
+        }
     }
 
-    protected String getAdapterName() {
-        return "MySQL";
-    }
-
-    protected List<UnifiedOrderDto> convertToUnified(List<OrderEntity> orderEntities) {
-        return orderEntities.stream()
-                .map(this::convertSingleToUnified)
-                .collect(Collectors.toList());
-    }
-
-    protected UnifiedOrderDto convertSingleToUnified(OrderEntity orderEntity) {
-        if (orderEntity == null) {
+    public UnifiedOrderDto convertToDto(OrderEntity order) {
+        if (order == null) {
             return null;
         }
 
         return UnifiedOrderDto.builder()
-                .id(orderEntity.getId())
-                .orderId(orderEntity.getUserId())
-                .status(orderEntity.getStatus())
-                .createdAt(orderEntity.getCreatedAt())
-                .totalAmount(orderEntity.getTotalAmount())
+                .id(order.getId())
+                .orderId(order.getId())
+                .userId(order.getUserId())
+                .status(order.getStatus())
+                .createdAt(order.getCreatedAt())
+                .totalAmount(order.getTotalAmount())
                 .build();
+    }
+
+    public List<UnifiedOrderDto> convertToDtoList(List<OrderEntity> orders) {
+        if (orders == null) {
+            return List.of();
+        }
+        return orders.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<OrderEntity> getOrdersByStatus(String status) {
+        return orderRepository.findByStatus(status);
+    }
+
+    public List<UnifiedOrderDto> getOrdersByStatusAsDto(String status) {
+        return getOrdersByStatus(status).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 }
