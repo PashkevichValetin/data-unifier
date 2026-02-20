@@ -40,7 +40,7 @@ public class DataUnificationController {
         try {
             Instant startTime = Instant.now();
 
-            switch (normalizedType) { // ИСПОЛЬЗУЕМ НОРМАЛИЗОВАННЫЙ ТИП
+            switch (normalizedType) {
                 case "all":
                     dataUnificationService.processAllData();
                     break;
