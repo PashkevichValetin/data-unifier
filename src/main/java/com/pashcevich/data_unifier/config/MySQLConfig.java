@@ -28,13 +28,13 @@ import java.util.HashMap;
 )
 public class MySQLConfig {
 
-    @Value("${mysql.datasource.url}")
+    @Value("${spring.datasource.mysql.url}")
     private String url;
 
-    @Value("${mysql.datasource.username}")
+    @Value("${spring.datasource.mysql.username}")
     private String username;
 
-    @Value("${mysql.datasource.password}")
+    @Value("${spring.datasource.mysql.password}")
     private String password;
 
     @Bean(name = "mysqlDataSource")

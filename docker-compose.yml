@@ -5,50 +5,107 @@ services:
     image: postgres:15
     container_name: postgres-db
     environment:
-      POSTGRES_DB: user_db
-      POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: users_db  # ИСПРАВЛЕНО: user_db -> users_db (соответствует коду)
+      POSTGRES_USER: postgres  # ИСПРАВЛЕНО: app_user -> postgres (соответствует application.yml)
+      POSTGRES_PASSWORD: postgres  # ИСПРАВЛЕНО: password -> postgres
     ports:
       - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:  # ДОБАВЛЕНО
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:  # ДОБАВЛЕНО
+      - data-unifier-network
 
   mysql:
     image: mysql:8.0
     container_name: mysql-db
     environment:
-      MYSQL_DATABASE: order_db
-      MYSQL_USER: app_user
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: orders_db  # ИСПРАВЛЕНО: order_db -> orders_db (соответствует коду)
+      MYSQL_ROOT_PASSWORD: root
     ports:
       - '3307:3306'
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init-scripts/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql
-    command: --default-authentication-plugin=mysql_native_password
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4  # ДОБАВЛЕНО
+      - --collation-server=utf8mb4_unicode_ci  # ДОБАВЛЕНО
+    healthcheck:  # ДОБАВЛЕНО
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data-unifier-network
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
     ports:
       - '2181:2181'
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data-unifier-network
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy  # ИСПРАВЛЕНО
     environment:
+      KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092  # ИСПРАВЛЕНО
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092  # ИСПРАВЛЕНО
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_DELETE_TOPIC_ENABLE: "true"  # ДОБАВЛЕНО
     ports:
       - '9092:9092'
+      - '29092:29092'  # ДОБАВЛЕНО для внутренних коммуникаций
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - data-unifier-network
+
+  # ДОБАВЛЕНО: Kafka UI для мониторинга (опционально)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - data-unifier-network
+
+networks:  # ДОБАВЛЕНО
+  data-unifier-network:
+    driver: bridge
 
 volumes:
   postgres_data:

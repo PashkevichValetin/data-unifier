@@ -28,13 +28,13 @@ import java.util.HashMap;
 )
 public class PostgresConfig {
 
-    @Value("${postgres.datasource.url}")
+    @Value("${spring.datasource.postgres.url}")
     private String url;
 
-    @Value("${postgres.datasource.username}")
+    @Value("${spring.datasource.postgres.username}")
     private String username;
 
-    @Value("${postgres.datasource.password}")
+    @Value("${spring.datasource.postgres.password}")
     private String password;
 
     @Bean(name = "postgresDataSource")

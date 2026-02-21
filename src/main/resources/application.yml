@@ -188,25 +188,18 @@ spring:
     activate:
       on-profile: dev
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: 192.168.0.10:9092
   datasource:
-    postgres:
-      jdbc-url: jdbc:postgresql://localhost:5432/users_db_dev
-      username: postgres
-      password: postgres
-      driver-class-name: org.postgresql.Driver
     mysql:
-      jdbc-url: jdbc:mysql://localhost:3306/orders_db_dev
+      url: jdbc:mysql://localhost:3306/orders_db
       username: root
       password: root
       driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
     postgres:
-      properties:
-        hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
-    mysql:
-      properties:
-        hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+      url: jdbc:postgresql://localhost:5432/users_db
+      username: postgres
+      password: postgres
+      driver-class-name: org.postgresql.Driver
 
 logging:
   level:
