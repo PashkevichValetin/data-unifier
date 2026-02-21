@@ -73,7 +73,7 @@ public class MySQLOderAdapterTest {
         // WHEN & THEN
         assertThatThrownBy(() -> orderAdapter.getAllOrders())
                 .isInstanceOf(DataUnificationException.class)
-                .hasMessageContaining("Faoled to fetch orders");
+                .hasMessageContaining("Failed to fetch orders");
     }
 
     @Test
@@ -102,7 +102,7 @@ public class MySQLOderAdapterTest {
 
         // THEN
         assertThat(result).isPresent();
-        verify(orderRepository).findByUserId(1L);
+        verify(orderRepository).findById(1L);
     }
 
     @Test

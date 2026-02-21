@@ -18,6 +18,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DataUnificationServiceImpl implements DataUnificationService {
 
+    private static final String MYSQL_TX = "mysqlTransactionManager";
+    private static final String POSTGRES_TX = "postgresTransactionManager";
+
     private final UserDataProvider userDataProvider;
     private final OrderDataProvider orderDataProvider;
     private final KafkaSenderService kafkaSenderService;
@@ -26,7 +29,6 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     private static final int BATCH_SIZE = 100;
 
     @Override
-    @Transactional(timeout = 300)
     public void processAllData() {
         log.info("Starting complete data processing");
 
@@ -48,7 +50,7 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     }
 
     @Override
-    @Transactional(readOnly = true, timeout = 120)
+    @Transactional(value = POSTGRES_TX, readOnly = true, timeout = 120)
     public void processUserData() {
         log.info("Starting user data processing");
 
@@ -67,7 +69,7 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     }
 
     @Override
-    @Transactional(readOnly = true, timeout = 60)
+    @Transactional(value = MYSQL_TX, readOnly = true, timeout = 60)
     public void processOrderData() {
         log.info("Starting order data processing");
 
@@ -86,7 +88,7 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     }
 
     @Override
-    @Transactional(timeout = 30)
+    @Transactional(value = POSTGRES_TX, timeout = 30)
     public UnifiedCustomerDto unifyCustomerById(Long userId) {
         log.info("Unifying customer by id: {}", userId);
 
@@ -109,7 +111,7 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     }
 
     @Override
-    @Transactional(timeout = 30)
+    @Transactional(value = POSTGRES_TX, timeout = 30)
     public void processUserById(Long userId) {
         log.info("Processing user by id: {}", userId);
 

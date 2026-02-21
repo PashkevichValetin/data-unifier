@@ -12,9 +12,9 @@ spring:
       group-id: data-unifier-group-${spring.profiles.active}
       auto-offset-reset: earliest
       enable-auto-commit: false
-      max-poll-records: 500
-      fetch-max-wait: 500
-      fetch-min-size: 1
+      max-poll-records: 100
+      fetch-max-wait: 1000
+      fetch-min-size: 10240
       max-partition-fetch-bytes: 1048576
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
@@ -24,6 +24,9 @@ spring:
           unifiedCustomerDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto,
           unifiedOrderDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedOrderDto
         spring.json.use.type.headers: false
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.default.type: com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto
         max.poll.interval.ms: 300000
         session.timeout.ms: 45000
         heartbeat.interval.ms: 3000
@@ -48,10 +51,12 @@ spring:
         delivery.timeout.ms: 120000
 
     listener:
-      concurrency: 3
+      concurrency: 1
       type: single
       ack-mode: manual_immediate
-      poll-timeout: 1500
+      poll-timeout: 5000
+      idle-between-polls: 10000
+      idle-event-interval: 30000
       missing-topics-fatal: false
 
   jpa:
@@ -87,7 +92,7 @@ app:
     topic:
       unified-customers: unified-customers-${spring.profiles.active}
       unified-orders: unified-orders-${spring.profiles.active}
-    producer:  # ОБЪЕДИНЕНО - здесь все настройки producer
+    producer:
       timeout-seconds: ${KAFKA_PRODUCER_TIMEOUT:30}
       pool:
         size: ${KAFKA_PRODUCER_POOL_SIZE:5}

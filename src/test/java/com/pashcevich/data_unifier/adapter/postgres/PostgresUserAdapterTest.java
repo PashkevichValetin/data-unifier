@@ -64,7 +64,7 @@ public class PostgresUserAdapterTest {
         when(userRepository.findAll()).thenReturn(users);
 
         // WHEN
-        List<UserEntity> result = postgresUserAdapter.getAllUsers(); // ИСПРАВЛЕНО: метод возвращает List<UserEntity>
+        List<UserEntity> result = postgresUserAdapter.getAllUsers();
 
         // THEN
         assertThat(result).hasSize(2);
@@ -77,7 +77,7 @@ public class PostgresUserAdapterTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(userEntity));
 
         // WHEN
-        Optional<UserEntity> result = postgresUserAdapter.getUserById(1L); // ИСПРАВЛЕНО: метод принимает Long
+        Optional<UserEntity> result = postgresUserAdapter.getUserById(1L);
 
         // THEN
         assertThat(result).isPresent();
@@ -88,7 +88,7 @@ public class PostgresUserAdapterTest {
     @Test
     void getUserById_withNullId_shouldReturnEmptyOptional() {
         // WHEN
-        Optional<UserEntity> result = postgresUserAdapter.getUserById(null); // ИСПРАВЛЕНО: метод принимает Long
+        Optional<UserEntity> result = postgresUserAdapter.getUserById(null);
 
         // THEN
         assertThat(result).isEmpty();
