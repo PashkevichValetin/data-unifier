@@ -13,9 +13,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 @ExtendWith(MockitoExtension.class)
 public class UniversalConsumerAdapterTest {
 
@@ -51,14 +48,14 @@ public class UniversalConsumerAdapterTest {
 
     @Test
     void consumeUnifiedCustomer_shouldProcessMessage() {
-        // WHEN & THEN - не должно быть исключений
-        assertThatCode(() -> consumerAdapter.consumeUnifiedCustomer(
+        // WHEN
+        consumerAdapter.consumeUnifiedCustomer(
                 testCustomer,
                 "1",
                 0,
                 "unified-customers-test",
                 System.currentTimeMillis()
-        )).doesNotThrowAnyException();
+        );
     }
 
     @Test
@@ -74,25 +71,25 @@ public class UniversalConsumerAdapterTest {
                 .orders(List.of())
                 .build();
 
-        // WHEN & THEN
-        assertThatCode(() -> consumerAdapter.consumeUnifiedCustomer(
+        // WHEN
+        consumerAdapter.consumeUnifiedCustomer(
                 customerWithoutOrders,
                 "2",
                 1,
                 "unified-customers-test",
                 System.currentTimeMillis()
-        )).doesNotThrowAnyException();
+        );
     }
 
     @Test
-    void consumeUnifiedCustomer_withNullCustomer_shouldNotThrowException() {
-        // WHEN & THEN - теперь не падает благодаря проверке на null в адаптере
-        assertThatCode(() -> consumerAdapter.consumeUnifiedCustomer(
+    void consumeUnifiedCustomer_withNullCustomer_shouldProcessMessage() {
+        // WHEN
+        consumerAdapter.consumeUnifiedCustomer(
                 null,
                 "3",
                 2,
                 "unified-customers-test",
                 System.currentTimeMillis()
-        )).doesNotThrowAnyException();
+        );
     }
 }

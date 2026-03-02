@@ -28,12 +28,6 @@ public class UniversalConsumerAdapter {
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
             @Header(KafkaHeaders.RECEIVED_TIMESTAMP) Long timestamp) {
 
-        if (customer == null) {
-            log.warn("Received null customer, skipping processing. Topic: {}, Partition: {}, Key: {}",
-                    topic, partition, key);
-            return;
-        }
-
         log.info("""
                 =========================================
                 Received unified customer data:
@@ -46,13 +40,15 @@ public class UniversalConsumerAdapter {
                 topic, partition, key, timestamp,
                 customer.getUserId(), customer.getName(), customer.getEmail(),
                 customer.getRegistrationDate(),
-                customer.getOrders() != null ? customer.getOrders().size() : 0);
-
-        if (customer.getOrders() != null && !customer.getOrders().isEmpty()) {
+                customer.getOrders().size());
+        if (!customer.getOrders().isEmpty()) {
             log.debug("Orders details for user {}:", customer.getUserId());
             customer.getOrders().forEach(order ->
                     log.debug("  Order ID: {}, Amount: {}, Status: {}, Created: {}",
                             order.getOrderId(), order.getTotalAmount(), order.getStatus(), order.getCreatedAt()));
         }
+
+        // Здесь можно добавить логику обработки данных (например, сохранение в БД)
+        // processCustomerData(customer);
     }
 }

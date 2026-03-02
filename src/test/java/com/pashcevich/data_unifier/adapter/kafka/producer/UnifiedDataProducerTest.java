@@ -8,6 +8,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -22,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -35,6 +35,7 @@ public class UnifiedDataProducerTest {
     @Mock
     private KafkaTemplate<String, UnifiedOrderDto> orderKafkaTemplate;
 
+    @InjectMocks
     private UnifiedDataProducer unifiedDataProducer;
 
     private UnifiedCustomerDto testCustomer;
@@ -44,9 +45,6 @@ public class UnifiedDataProducerTest {
 
     @BeforeEach
     void setUp() {
-        // Создаем реальный объект с моками в конструкторе
-        unifiedDataProducer = new UnifiedDataProducer(customerKafkaTemplate, orderKafkaTemplate);
-
         ReflectionTestUtils.setField(unifiedDataProducer, "customerTopic", "unified-customers-test");
         ReflectionTestUtils.setField(unifiedDataProducer, "ordersTopic", "unified-orders-test");
         ReflectionTestUtils.setField(unifiedDataProducer, "timeoutSeconds", 30);

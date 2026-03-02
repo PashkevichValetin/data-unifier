@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -29,13 +28,13 @@ import java.util.HashMap;
 )
 public class MySQLConfig {
 
-    @Value("${spring.datasource.mysql.url}")
+    @Value("${mysql.datasource.url}")
     private String url;
 
-    @Value("${spring.datasource.mysql.username}")
+    @Value("${mysql.datasource.username}")
     private String username;
 
-    @Value("${spring.datasource.mysql.password}")
+    @Value("${mysql.datasource.password}")
     private String password;
 
     @Bean(name = "mysqlDataSource")
