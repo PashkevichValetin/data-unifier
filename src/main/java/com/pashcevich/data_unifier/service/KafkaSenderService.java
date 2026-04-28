@@ -15,55 +15,21 @@ import org.springframework.stereotype.Service;
 import java.net.ConnectException;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
-@Slf4j
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class KafkaSenderService {
+    private final UnifiedDataProducer producer;
+    private final ProcessingMetrics metrics;
 
-    private final UnifiedDataProducer unifiedDataProducer;
-    private final ProcessingMetrics processingMetrics;
-
-    private static final int BATCH_SIZE = 100;
-
-    @Retryable(
-            value = {KafkaException.class, ConnectException.class, TimeoutException.class},
-            exclude = {DataIntegrityViolationException.class, IllegalArgumentException.class},
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 1000, multiplier = 2, maxDelay = 10000)
-    )
     public void sendUsersToKafka(List<UnifiedCustomerDto> users) {
-        if (users == null || users.isEmpty()) {
-            log.debug("No users to send");
-            return;
-        }
+        sendBatch(users, producer::sendCustomer, "user");
+    }
 
-        log.info("Sending {} users to Kafka in batches of {}", users.size(), BATCH_SIZE);
-
-        int successCount = 0;
-        int errorCount = 0;
-
-        for (int i = 0; i < users.size(); i += BATCH_SIZE) {
-            int end = Math.min(i + BATCH_SIZE, users.size());
-            List<UnifiedCustomerDto> batch = users.subList(i, end);
-
-            for (UnifiedCustomerDto user : batch) {
-                try {
-                    unifiedDataProducer.sendCustomer(user);
-                    processingMetrics.incrementProcessed();
-                    successCount++;
-                } catch (Exception e) {
-                    errorCount++;
-                    log.error("Failed to send user {}: {}", user.getId(), e.getMessage());
-                }
-            }
-        }
-
-        log.info("Sent {}/{} users successfully, {} failed", successCount, users.size(), errorCount);
-
-        if (errorCount > 0 && successCount == 0) {
-            throw new KafkaException("Failed to send all users to Kafka");
-        }
+    public void sendOrdersToKafka(List<UnifiedOrderDto> orders) {
+        sendBatch(orders, producer::sendOrder, "order");
     }
 
     @Retryable(
@@ -71,48 +37,28 @@ public class KafkaSenderService {
             exclude = {DataIntegrityViolationException.class, IllegalArgumentException.class},
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2, maxDelay = 10000)
-    )
-    public void sendOrdersToKafka(List<UnifiedOrderDto> orders) {
-        if (orders == null || orders.isEmpty()) {
-            log.debug("No orders to send");
-            return;
-        }
-
-        log.info("Sending {} orders to Kafka", orders.size());
-
-        int successCount = 0;
-        int errorCount = 0;
-
-        for (UnifiedOrderDto order : orders) {
-            try {
-                unifiedDataProducer.sendOrder(order);
-                processingMetrics.incrementProcessed();
-                successCount++;
-            } catch (Exception e) {
-                errorCount++;
-                log.error("Failed to send order {}: {}", order.getId(), e.getMessage());
-            }
-        }
-
-        log.info("Sent {}/{} orders successfully, {} failed", successCount, orders.size(), errorCount);
-
-        if (errorCount > 0 && successCount == 0) {
-            throw new KafkaException("Failed to send all orders to Kafka");
-        }
-    }
-
-    @Retryable(
-            value = {KafkaException.class, ConnectException.class},
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 1000, multiplier = 2)
     )
     public void sendSingleUser(UnifiedCustomerDto user) {
-        try {
-            unifiedDataProducer.sendCustomer(user);
-            log.debug("Successfully sent single user: {}", user.getId());
-        } catch (Exception e) {
-            log.error("Failed to send single user: {}", user.getId(), e);
-            throw e;
+        producer.sendCustomer(user);
+        metrics.incrementProcessed();
+    }
+
+    private <T> void sendBatch(List<T> items, Consumer<T> sender, String type) {
+        if (items == null || items.isEmpty()) return;
+        log.info("Sending {} {}s to Kafka", items.size(), type);
+
+        int success = 0, error = 0;
+        for (T item : items) {
+            try {
+                sender.accept(item);
+                metrics.incrementProcessed();
+                success++;
+            } catch (Exception e) {
+                error++;
+                log.error("Failed to send {}: {}", type, item, e);
+            }
         }
+        log.info("Sent {}/{} {}, {} failed", success, items.size(), type, error);
+        if (error > 0 && success == 0) throw new KafkaException("All " + type + "s failed");
     }
 }

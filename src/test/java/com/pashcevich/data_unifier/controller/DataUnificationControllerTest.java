@@ -7,7 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
+
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import static org.hamcrest.Matchers.hasItems;
@@ -19,10 +20,10 @@ public class DataUnificationControllerTest {
     @Autowired
     private WebTestClient webClient;
 
-    @MockitoBean
+    @MockBean
     private DataUnificationService dataUnificationService;
 
-    @MockitoBean
+    @MockBean
     private DataUnificationScheduler dataUnificationScheduler;
 
     @Test

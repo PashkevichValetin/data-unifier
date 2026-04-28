@@ -9,7 +9,7 @@ import com.pashcevich.data_unifier.service.impl.UserDataProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // ИСПРАВЛЕНО: правильный импорт!
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -29,18 +29,13 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     @Transactional(timeout = 300)
     public void processAllData() {
         log.info("Starting complete data processing");
-
         long startTime = System.currentTimeMillis();
 
         try {
             processUserData();
             processOrderData();
-
             long duration = System.currentTimeMillis() - startTime;
             log.info("Complete data processing finished in {} ms", duration);
-
-            processingMetrics.incrementProcessed();
-
         } catch (Exception e) {
             log.error("Failed to process all data", e);
             throw new DataUnificationException("Failed to process all data", e);
@@ -51,15 +46,11 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     @Transactional(readOnly = true, timeout = 120)
     public void processUserData() {
         log.info("Starting user data processing");
-
         try {
             List<UnifiedCustomerDto> users = userDataProvider.getAllUsersWithOrders();
             log.debug("Retrieved {} users with orders", users.size());
-
             kafkaSenderService.sendUsersToKafka(users);
-
             log.info("Successfully processed {} users", users.size());
-
         } catch (Exception e) {
             log.error("Failed to process user data", e);
             throw new DataUnificationException("Failed to process user data", e);
@@ -70,15 +61,11 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     @Transactional(readOnly = true, timeout = 60)
     public void processOrderData() {
         log.info("Starting order data processing");
-
         try {
             List<UnifiedOrderDto> orders = orderDataProvider.getAllOrders();
             log.debug("Retrieved {} orders", orders.size());
-
             kafkaSenderService.sendOrdersToKafka(orders);
-
             log.info("Successfully processed {} orders", orders.size());
-
         } catch (Exception e) {
             log.error("Failed to process order data", e);
             throw new DataUnificationException("Failed to process order data", e);
@@ -89,12 +76,10 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     @Transactional(timeout = 30)
     public UnifiedCustomerDto unifyCustomerById(Long userId) {
         log.info("Unifying customer by id: {}", userId);
-
         return userDataProvider.getUserWithOrders(userId)
                 .map(customer -> {
                     try {
                         kafkaSenderService.sendSingleUser(customer);
-                        processingMetrics.incrementProcessed();
                         log.info("Successfully unified and sent customer: {}", userId);
                         return customer;
                     } catch (Exception e) {
@@ -112,13 +97,11 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     @Transactional(timeout = 30)
     public void processUserById(Long userId) {
         log.info("Processing user by id: {}", userId);
-
         userDataProvider.getUserWithOrders(userId)
                 .ifPresentOrElse(
                         user -> {
                             try {
                                 kafkaSenderService.sendSingleUser(user);
-                                processingMetrics.incrementProcessed();
                                 log.debug("Successfully processed user: {}", userId);
                             } catch (Exception e) {
                                 log.error("Failed to send user {} to Kafka", userId, e);
