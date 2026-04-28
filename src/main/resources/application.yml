@@ -4,10 +4,10 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
-  # Настройки JPA и Hibernate (Общие для всех профилей)
+  # JPA настройки
   jpa:
     hibernate:
-      ddl-auto: update # Автоматически создает таблицы, если их нет
+      ddl-auto: update
     show-sql: ${SHOW_SQL:false}
     open-in-view: false
     properties:
@@ -18,7 +18,7 @@ spring:
           order_inserts: true
           order_updates: true
 
-  # Kafka настройки (Общие)
+  # Kafka настройки
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -50,6 +50,13 @@ spring:
           unifiedCustomerDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto,
           unifiedOrderDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedOrderDto
 
+# Пользовательские настройки (Топики Kafka)
+app:
+  kafka:
+    topic:
+      unified-customers: ${KAFKA_TOPIC_CUSTOMERS:unified-customers}
+      unified-orders: ${KAFKA_TOPIC_ORDERS:unified-orders}
+
 server:
   port: ${SERVER_PORT:8080}
 
@@ -70,13 +77,11 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 ---
-# Профиль для разработки (dev)
+# Профиль dev
 spring:
   config:
     activate:
       on-profile: dev
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   mysql:
     datasource:
       url: ${MYSQL_DATASOURCE_URL:jdbc:mysql://localhost:3306/order_db}
@@ -91,7 +96,7 @@ spring:
       driver-class-name: org.postgresql.Driver
 
 ---
-# Профиль для Docker (prod)
+# Профиль prod
 spring:
   config:
     activate:
