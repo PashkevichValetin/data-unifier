@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: postgres-db
     environment:
       POSTGRES_DB: users_db
@@ -12,14 +12,16 @@ services:
       - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Убедись, что путь к скрипту верный
       - ./init-scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d users_db"]
+      interval: 5s
       timeout: 5s
       retries: 5
     networks:
       - data-unifier-network
+    restart: unless-stopped
 
   mysql:
     image: mysql:8.0
@@ -31,18 +33,20 @@ services:
       - '3307:3306'
     volumes:
       - mysql_data:/var/lib/mysql
+      # Убедись, что путь к скрипту верный
       - ./init-scripts/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql
     command:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
       timeout: 5s
       retries: 5
     networks:
       - data-unifier-network
+    restart: unless-stopped
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
@@ -53,8 +57,8 @@ services:
     ports:
       - '2181:2181'
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 10s
+      test: ["CMD-SHELL", "echo srvr | nc localhost 2181 || exit 1"]
+      interval: 5s
       timeout: 5s
       retries: 5
     networks:
@@ -75,30 +79,13 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_DELETE_TOPIC_ENABLE: "true"
     ports:
       - '9092:9092'
-      - '29092:29092'
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 3
-    networks:
-      - data-unifier-network
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui
-    depends_on:
-      kafka:
-        condition: service_healthy
-    ports:
-      - "8081:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      retries: 5
     networks:
       - data-unifier-network
 
@@ -111,15 +98,16 @@ services:
       - "8083:8080"
       - "9091:9090"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_PROFILES_ACTIVE=prod
       - TZ=Europe/Moscow
-      - mysql.datasource.url=jdbc:mysql://mysql-db:3306/orders_db
-      - mysql.datasource.username=root
-      - mysql.datasource.password=root
-      - postgres.datasource.url=jdbc:postgresql://postgres-db:5432/users_db
-      - postgres.datasource.username=postgres
-      - postgres.datasource.password=postgres
-      - kafka.bootstrap.servers=kafka:29092
+      # Эти переменные должны совпадать с именами сервисов выше
+      - PROD_MYSQL_URL=jdbc:mysql://mysql-db:3306/orders_db
+      - PROD_MYSQL_USER=root
+      - PROD_MYSQL_PASSWORD=root
+      - PROD_POSTGRES_URL=jdbc:postgresql://postgres-db:5432/users_db
+      - PROD_POSTGRES_USER=postgres
+      - PROD_POSTGRES_PASSWORD=postgres
+      - PROD_KAFKA_SERVERS=kafka:29092
     depends_on:
       postgres:
         condition: service_healthy
@@ -129,7 +117,7 @@ services:
         condition: service_healthy
     networks:
       - data-unifier-network
-    restart: unless-stopped
+    restart: always
 
 networks:
   data-unifier-network:
