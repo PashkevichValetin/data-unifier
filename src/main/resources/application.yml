@@ -5,7 +5,6 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
-  # Kafka настройки
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -77,7 +76,6 @@ spring:
   transaction:
     default-timeout: 30
 
-# Настройки приложения
 app:
   scheduler:
     enabled: ${SCHEDULER_ENABLED:true}
@@ -109,7 +107,6 @@ app:
     multiplier: 2.0
     max-delay: 10000
 
-# Сервер
 server:
   port: ${SERVER_PORT:8080}
   error:
@@ -122,7 +119,6 @@ server:
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
     min-response-size: 1024
 
-# Actuator мониторинг
 management:
   endpoints:
     web:
@@ -158,7 +154,6 @@ management:
     annotations:
       enabled: true
 
-# Логирование
 logging:
   level:
     com.pashcevich.data_unifier: ${LOG_LEVEL:DEBUG}
@@ -175,7 +170,6 @@ logging:
     max-size: 100MB
     max-history: 30
 
-# Документация API
 springdoc:
   api-docs:
     path: /api-docs
@@ -185,9 +179,7 @@ springdoc:
     tags-sorter: alpha
     try-it-out-enabled: true
   packages-to-scan: com.pashcevich.data_unifier.controller
-
 ---
-# Профиль для разработки
 spring:
   config:
     activate:
@@ -212,7 +204,6 @@ logging:
     org.springframework.kafka: DEBUG
 
 ---
-# Профиль для тестирования
 spring:
   config:
     activate:
@@ -228,9 +219,7 @@ spring:
 logging:
   level:
     com.pashcevich.data_unifier: DEBUG
-
 ---
-# Профиль для продакшена
 spring:
   config:
     activate:
@@ -242,14 +231,16 @@ spring:
     consumer:
       enable-auto-commit: false
   datasource:
-    postgres:
-      jdbc-url: ${PROD_POSTGRES_URL}
-      username: ${PROD_POSTGRES_USER}
-      password: ${PROD_POSTGRES_PASSWORD}
-    mysql:
-      jdbc-url: ${PROD_MYSQL_URL}
-      username: ${PROD_MYSQL_USER}
-      password: ${PROD_MYSQL_PASSWORD}
+    datasource:
+      mysql:
+        url: ${MYSQL_DATASOURCE_URL:jdbc:mysql://localhost:3306/order_db}
+        username: ${MYSQL_DATASOURCE_USERNAME:app_user}
+        password: ${MYSQL_DATASOURCE_PASSWORD:password}
+      postgres:
+        url: ${POSTGRES_DATASOURCE_URL:jdbc:postgresql://localhost:5432/user_db}
+        username: ${POSTGRES_DATASOURCE_USERNAME:app_user}
+        password: ${POSTGRES_DATASOURCE_PASSWORD:password}
+
   jpa:
     postgres:
       properties:
