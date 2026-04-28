@@ -91,7 +91,7 @@ services:
 
   app:
     build:
-      context: .
+      context: ./data-unifier
       dockerfile: Dockerfile
     container_name: data-unifier-app
     ports:
