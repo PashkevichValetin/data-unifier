@@ -96,22 +96,22 @@ spring:
       driver-class-name: org.postgresql.Driver
 
 ---
-# Профиль prod
+# Профиль для Docker (prod)
 spring:
   config:
     activate:
       on-profile: prod
-  kafka:
-    bootstrap-servers: ${PROD_KAFKA_SERVERS:kafka-broker:9092}
+  # Эти строки исправят ошибку "Could not resolve placeholder 'mysql.datasource.url'"
   mysql:
     datasource:
-      url: ${PROD_MYSQL_URL:jdbc:mysql://mysql-orders-db:3306/order_db}
-      username: ${PROD_MYSQL_USER:app_user}
-      password: ${PROD_MYSQL_PASSWORD:password}
-      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: ${PROD_MYSQL_URL:jdbc:mysql://mysql-db:3306/orders_db}
+      username: ${PROD_MYSQL_USER:root}
+      password: ${PROD_MYSQL_PASSWORD:root}
   postgres:
     datasource:
-      url: ${PROD_POSTGRES_URL:jdbc:postgresql://postgres-data-db:5432/user_db}
-      username: ${PROD_POSTGRES_USER:app_user}
-      password: ${PROD_POSTGRES_PASSWORD:password}
-      driver-class-name: org.postgresql.Driver
+      url: ${PROD_POSTGRES_URL:jdbc:postgresql://postgres-db:5432/users_db}
+      username: ${PROD_POSTGRES_USER:postgres}
+      password: ${PROD_POSTGRES_PASSWORD:postgres}
+  kafka:
+    bootstrap-servers: ${PROD_KAFKA_SERVERS:kafka:29092}
+
