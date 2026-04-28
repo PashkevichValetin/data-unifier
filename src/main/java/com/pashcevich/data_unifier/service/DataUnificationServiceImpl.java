@@ -26,7 +26,7 @@ public class DataUnificationServiceImpl implements DataUnificationService {
     private static final int BATCH_SIZE = 100;
 
     @Override
-    @Transactional(timeout = 300)
+    @Transactional("mysqlTransactionManager")
     public void processAllData() {
         log.info("Starting complete data processing");
         long startTime = System.currentTimeMillis();
