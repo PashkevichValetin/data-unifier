@@ -4,7 +4,21 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
-  # Kafka настройки
+  # Настройки JPA и Hibernate (Общие для всех профилей)
+  jpa:
+    hibernate:
+      ddl-auto: update # Автоматически создает таблицы, если их нет
+    show-sql: ${SHOW_SQL:false}
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 20
+          fetch_size: 100
+          order_inserts: true
+          order_updates: true
+
+  # Kafka настройки (Общие)
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -36,17 +50,6 @@ spring:
           unifiedCustomerDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto,
           unifiedOrderDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedOrderDto
 
-  jpa:
-    properties:
-      hibernate:
-        jdbc:
-          batch_size: 20
-          fetch_size: 100
-        order_inserts: true
-        order_updates: true
-    show-sql: ${SHOW_SQL:false}
-    open-in-view: false
-
 server:
   port: ${SERVER_PORT:8080}
 
@@ -74,39 +77,36 @@ spring:
       on-profile: dev
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-
-# ВЫНЕСЕНО ИЗ-ПОД SPRING: теперь путь mysql.datasource.url
-mysql:
-  datasource:
-    url: ${MYSQL_DATASOURCE_URL:jdbc:mysql://localhost:3306/order_db}
-    username: ${MYSQL_DATASOURCE_USERNAME:app_user}
-    password: ${MYSQL_DATASOURCE_PASSWORD:password}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-
-postgres:
-  datasource:
-    url: ${POSTGRES_DATASOURCE_URL:jdbc:postgresql://localhost:5432/user_db}
-    username: ${POSTGRES_DATASOURCE_USERNAME:app_user}
-    password: ${POSTGRES_DATASOURCE_PASSWORD:password}
-    driver-class-name: org.postgresql.Driver
+  mysql:
+    datasource:
+      url: ${MYSQL_DATASOURCE_URL:jdbc:mysql://localhost:3306/order_db}
+      username: ${MYSQL_DATASOURCE_USERNAME:app_user}
+      password: ${MYSQL_DATASOURCE_PASSWORD:password}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  postgres:
+    datasource:
+      url: ${POSTGRES_DATASOURCE_URL:jdbc:postgresql://localhost:5432/user_db}
+      username: ${POSTGRES_DATASOURCE_USERNAME:app_user}
+      password: ${POSTGRES_DATASOURCE_PASSWORD:password}
+      driver-class-name: org.postgresql.Driver
 
 ---
-# Профиль для продакшена (prod)
+# Профиль для Docker (prod)
 spring:
   config:
     activate:
       on-profile: prod
   kafka:
-    bootstrap-servers: ${PROD_KAFKA_SERVERS:kafka:9092}
-
-mysql:
-  datasource:
-    url: ${PROD_MYSQL_URL:jdbc:mysql://mysql-orders-db:3306/order_db}
-    username: ${PROD_MYSQL_USER:app_user}
-    password: ${PROD_MYSQL_PASSWORD:password}
-
-postgres:
-  datasource:
-    url: ${PROD_POSTGRES_URL:jdbc:postgresql://postgres-data-db:5432/user_db}
-    username: ${PROD_POSTGRES_USER:app_user}
-    password: ${PROD_POSTGRES_PASSWORD:password}
+    bootstrap-servers: ${PROD_KAFKA_SERVERS:kafka-broker:9092}
+  mysql:
+    datasource:
+      url: ${PROD_MYSQL_URL:jdbc:mysql://mysql-orders-db:3306/order_db}
+      username: ${PROD_MYSQL_USER:app_user}
+      password: ${PROD_MYSQL_PASSWORD:password}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  postgres:
+    datasource:
+      url: ${PROD_POSTGRES_URL:jdbc:postgresql://postgres-data-db:5432/user_db}
+      username: ${PROD_POSTGRES_USER:app_user}
+      password: ${PROD_POSTGRES_PASSWORD:password}
+      driver-class-name: org.postgresql.Driver
