@@ -70,7 +70,7 @@ public class MySQLConfig {
 
         HashMap<String, Object> properties = new HashMap<>(jpaProperties.getProperties());
         properties.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
-        properties.put("hibernate.hbm2ddl.auto", "validate");
+        properties.put("hibernate.hbm2ddl.auto", "update");
 
         em.setJpaPropertyMap(properties);
         return em;
