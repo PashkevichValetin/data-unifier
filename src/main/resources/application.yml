@@ -37,6 +37,7 @@ spring:
           unifiedCustomerDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto,
           unifiedOrderDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedOrderDto
         spring.json.use.type.headers: false
+        spring.json.value.default.type: com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto
     producer:
       retries: 3
       acks: all
