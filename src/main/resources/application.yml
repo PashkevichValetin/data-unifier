@@ -1,6 +1,13 @@
 server:
   port: ${SERVER_PORT:8080}
 
+# Блок настроек топиков (теперь он на месте, сервис не упадет)
+app:
+  kafka:
+    topic:
+      unified-customers: ${KAFKA_TOPIC_CUSTOMERS:unified-customers}
+      unified-orders: ${KAFKA_TOPIC_ORDERS:unified-orders}
+
 management:
   endpoints:
     web:
