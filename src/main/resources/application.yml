@@ -1,63 +1,3 @@
-spring:
-  application:
-    name: data-unifier
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
-
-  # JPA настройки
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: ${SHOW_SQL:false}
-    open-in-view: false
-    properties:
-      hibernate:
-        jdbc:
-          batch_size: 20
-          fetch_size: 100
-          order_inserts: true
-          order_updates: true
-
-  # Kafka настройки
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: data-unifier-group-${spring.profiles.active}
-      auto-offset-reset: earliest
-      enable-auto-commit: false
-      max-poll-records: 100
-      fetch-max-wait: 1000
-      fetch-min-size: 10240
-      max-partition-fetch-bytes: 1048576
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
-        spring.json.type.mapping: >
-          unifiedCustomerDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto,
-          unifiedOrderDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedOrderDto
-        spring.json.use.type.headers: false
-        spring.json.value.default.type: com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto
-    producer:
-      retries: 3
-      acks: all
-      compression-type: snappy
-      batch-size: 16384
-      linger-ms: 5
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring.json.type.mapping: >
-          unifiedCustomerDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedCustomerDto,
-          unifiedOrderDto:com.pashcevich.data_unifier.adapter.kafka.producer.dto.UnifiedOrderDto
-
-# Пользовательские настройки (Топики Kafka)
-app:
-  kafka:
-    topic:
-      unified-customers: ${KAFKA_TOPIC_CUSTOMERS:unified-customers}
-      unified-orders: ${KAFKA_TOPIC_ORDERS:unified-orders}
-
 server:
   port: ${SERVER_PORT:8080}
 
@@ -65,21 +5,47 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, prometheus # Добавляем prometheus
+        include: "health,info,prometheus"
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: always
   metrics:
     export:
       prometheus:
         enabled: true
 
+spring:
+  application:
+    name: data-unifier
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: ${SHOW_SQL:false}
+    open-in-view: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: data-unifier-group-${spring.profiles.active}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
 logging:
   level:
     com.pashcevich.data_unifier: ${LOG_LEVEL:DEBUG}
     org.springframework.kafka: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 ---
-# Профиль dev
 spring:
   config:
     activate:
@@ -89,31 +55,26 @@ spring:
       url: ${MYSQL_DATASOURCE_URL:jdbc:mysql://localhost:3306/order_db}
       username: ${MYSQL_DATASOURCE_USERNAME:app_user}
       password: ${MYSQL_DATASOURCE_PASSWORD:password}
-      driver-class-name: com.mysql.cj.jdbc.Driver
   postgres:
     datasource:
       url: ${POSTGRES_DATASOURCE_URL:jdbc:postgresql://localhost:5432/user_db}
       username: ${POSTGRES_DATASOURCE_USERNAME:app_user}
       password: ${POSTGRES_DATASOURCE_PASSWORD:password}
-      driver-class-name: org.postgresql.Driver
 
 ---
-# Профиль для Docker (prod)
 spring:
   config:
     activate:
       on-profile: prod
-  # Эти строки исправят ошибку "Could not resolve placeholder 'mysql.datasource.url'"
   mysql:
     datasource:
-      url: ${PROD_MYSQL_URL:jdbc:mysql://mysql-db:3306/orders_db}
-      username: ${PROD_MYSQL_USER:root}
-      password: ${PROD_MYSQL_PASSWORD:root}
+      url: ${MYSQL_DATASOURCE_URL:jdbc:mysql://mysql-orders-db:3306/order_db}
+      username: ${MYSQL_DATASOURCE_USERNAME:app_user}
+      password: ${MYSQL_DATASOURCE_PASSWORD:password}
   postgres:
     datasource:
-      url: ${PROD_POSTGRES_URL:jdbc:postgresql://postgres-db:5432/users_db}
-      username: ${PROD_POSTGRES_USER:postgres}
-      password: ${PROD_POSTGRES_PASSWORD:postgres}
+      url: ${POSTGRES_DATASOURCE_URL:jdbc:postgresql://postgres-data-db:5432/user_db}
+      username: ${POSTGRES_DATASOURCE_USERNAME:app_user}
+      password: ${POSTGRES_DATASOURCE_PASSWORD:password}
   kafka:
-    bootstrap-servers: ${PROD_KAFKA_SERVERS:kafka:29092}
-
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
