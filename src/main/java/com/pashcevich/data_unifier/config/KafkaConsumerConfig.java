@@ -23,7 +23,7 @@ public class KafkaConsumerConfig {
     @Bean
     public ConsumerFactory<String, UnifiedCustomerDto> consumerFactory(
             KafkaProperties kafkaProperties,
-            ObjectProvider<SslBundles> sslBundles) { // Добавляем этот параметр
+            ObjectProvider<SslBundles> sslBundles) {
 
         Map<String, Object> props = kafkaProperties.buildConsumerProperties(sslBundles.getIfAvailable());
 
