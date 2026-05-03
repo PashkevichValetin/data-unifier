@@ -1,7 +1,8 @@
 version: '3.8'
 
 services:
-  postgres:
+  # --- БАЗЫ ДАННЫХ ---
+  postgres-db:
     image: postgres:15-alpine
     container_name: postgres-db
     environment:
@@ -9,10 +10,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - '5433:5432'
+      - '5432:5432' # Внутренний и внешний порты (стандарт)
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Убедись, что путь к скрипту верный
       - ./init-scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d users_db"]
@@ -20,20 +20,19 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - data-unifier-network
+      - platform-net
     restart: unless-stopped
 
-  mysql:
+  mysql-db:
     image: mysql:8.0
     container_name: mysql-db
     environment:
       MYSQL_DATABASE: orders_db
       MYSQL_ROOT_PASSWORD: root
     ports:
-      - '3307:3306'
+      - '3306:3306'
     volumes:
       - mysql_data:/var/lib/mysql
-      # Убедись, что путь к скрипту верный
       - ./init-scripts/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql
     command:
       - --default-authentication-plugin=mysql_native_password
@@ -45,82 +44,68 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - data-unifier-network
+      - platform-net
     restart: unless-stopped
 
+  # --- СООБЩЕНИЯ (KAFKA) ---
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - '2181:2181'
-    healthcheck:
-      test: ["CMD-SHELL", "echo srvr | nc localhost 2181 || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     networks:
-      - data-unifier-network
+      - platform-net
 
-  kafka:
+  kafka-broker: # Переименовал для порядка
     image: confluentinc/cp-kafka:7.4.0
-    container_name: kafka
+    container_name: kafka-broker
     depends_on:
       zookeeper:
         condition: service_healthy
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
+      # ВАЖНО: Внутри сети используем порт 29092 и имя хоста kafka-broker
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka-broker:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     ports:
       - '9092:9092'
-    healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
     networks:
-      - data-unifier-network
+      - platform-net
 
-  app:
+  # --- ПРИЛОЖЕНИЕ ---
+  data-unifier-service:
     build:
       context: ./data-unifier
       dockerfile: Dockerfile
-    container_name: data-unifier-app
+    container_name: data-unifier-service
     ports:
-      - "8083:8080"
-      - "9091:9090"
+      - "8081:8080" # Внешний 8081, внутренний 8080
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - TZ=Europe/Moscow
-      # Эти переменные должны совпадать с именами сервисов выше
-      - PROD_MYSQL_URL=jdbc:mysql://mysql-db:3306/orders_db
-      - PROD_MYSQL_USER=root
-      - PROD_MYSQL_PASSWORD=root
-      - PROD_POSTGRES_URL=jdbc:postgresql://postgres-db:5432/users_db
-      - PROD_POSTGRES_USER=postgres
-      - PROD_POSTGRES_PASSWORD=postgres
-      - PROD_KAFKA_SERVERS=kafka:29092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-broker:29092
+      - MYSQL_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/orders_db
+      - MYSQL_DATASOURCE_USERNAME=root
+      - MYSQL_DATASOURCE_PASSWORD=root
+      - POSTGRES_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/users_db
+      - POSTGRES_DATASOURCE_USERNAME=postgres
+      - POSTGRES_DATASOURCE_PASSWORD=postgres
     depends_on:
-      postgres:
+      postgres-db:
         condition: service_healthy
-      mysql:
+      mysql-db:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
+      kafka-broker:
+        condition: service_started
     networks:
-      - data-unifier-network
+      - platform-net
     restart: always
 
 networks:
-  data-unifier-network:
+  platform-net:
     driver: bridge
 
 volumes:

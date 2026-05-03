@@ -15,8 +15,8 @@ management:
   endpoint:
     prometheus:
       enabled: true
-    health:
-      show-details: always
+  health:
+    show-details: always
   metrics:
     export:
       prometheus:
@@ -83,4 +83,5 @@ spring:
       username: ${POSTGRES_DATASOURCE_USERNAME:app_user}
       password: ${POSTGRES_DATASOURCE_PASSWORD:password}
   kafka:
-      kafka-brokers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-broker:9092}
+
