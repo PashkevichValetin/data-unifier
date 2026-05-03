@@ -1,7 +1,6 @@
 server:
   port: ${SERVER_PORT:8080}
 
-# Блок настроек топиков (теперь он на месте, сервис не упадет)
 app:
   kafka:
     topic:
@@ -84,4 +83,4 @@ spring:
       username: ${POSTGRES_DATASOURCE_USERNAME:app_user}
       password: ${POSTGRES_DATASOURCE_PASSWORD:password}
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+      kafka-brokers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
