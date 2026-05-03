@@ -59,13 +59,13 @@ spring:
   mysql:
     datasource:
       url: ${MYSQL_DATASOURCE_URL:jdbc:mysql://localhost:3306/order_db}
-      username: ${MYSQL_DATASOURCE_USERNAME:app_user}
-      password: ${MYSQL_DATASOURCE_PASSWORD:password}
+      username: ${MYSQL_DATASOURCE_USERNAME:root}
+      password: ${MYSQL_DATASOURCE_PASSWORD:root}
   postgres:
     datasource:
-      url: ${POSTGRES_DATASOURCE_URL:jdbc:postgresql://localhost:5432/user_db}
-      username: ${POSTGRES_DATASOURCE_USERNAME:app_user}
-      password: ${POSTGRES_DATASOURCE_PASSWORD:password}
+      url: ${POSTGRES_DATASOURCE_URL:jdbc:postgresql://localhost:5432/users_db}
+      username: ${POSTGRES_DATASOURCE_USERNAME:postgres}
+      password: ${POSTGRES_DATASOURCE_PASSWORD:postgres}
 
 ---
 spring:
@@ -74,14 +74,16 @@ spring:
       on-profile: prod
   mysql:
     datasource:
-      url: ${MYSQL_DATASOURCE_URL:jdbc:mysql://mysql-orders-db:3306/order_db}
-      username: ${MYSQL_DATASOURCE_USERNAME:app_user}
-      password: ${MYSQL_DATASOURCE_PASSWORD:password}
+      # ИСПРАВЛЕНО: имя сервиса из твоего compose - mysql-db
+      url: ${MYSQL_DATASOURCE_URL:jdbc:mysql://mysql-db:3306/orders_db}
+      username: ${MYSQL_DATASOURCE_USERNAME:root}
+      password: ${MYSQL_DATASOURCE_PASSWORD:root}
   postgres:
     datasource:
-      url: ${POSTGRES_DATASOURCE_URL:jdbc:postgresql://postgres-data-db:5432/user_db}
-      username: ${POSTGRES_DATASOURCE_USERNAME:app_user}
-      password: ${POSTGRES_DATASOURCE_PASSWORD:password}
+      # ИСПРАВЛЕНО: имя сервиса из твоего compose - postgres-db
+      url: ${POSTGRES_DATASOURCE_URL:jdbc:postgresql://postgres-db:5432/users_db}
+      username: ${POSTGRES_DATASOURCE_USERNAME:postgres}
+      password: ${POSTGRES_DATASOURCE_PASSWORD:postgres}
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-broker:9092}
-
+    # ИСПРАВЛЕНО: используем внутренний порт 29092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-broker:29092}
